@@ -760,3 +760,33 @@ plugin_functions:
                 description:
                     de: "MAC Adresse"
                     en: "MAC address"
+                    
+    get_number_of_deflections:
+        type: bool
+        description:
+            de: ""
+            en: ""
+    
+    get_deflection:
+        type: bool
+        description:
+            de: ""
+            en: ""
+    
+    get_deflections:
+        type: bool
+        description:
+            de: ""
+            en: ""
+    
+    set_deflection_enable:
+        type: bool
+        description:
+            de: ""
+            en: ""
+        parameters:
+            phone_number:
+                type: bool
+                description:
+                    de: ""
+                    en: ""

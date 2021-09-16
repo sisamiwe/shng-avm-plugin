@@ -512,6 +512,14 @@ class FritzDevice:
         :return: password, as set in plugin.conf
         """
         return self._password
+        
+    def get_smarthome_items(self):
+        """
+        Returns added items
+
+        :return: array of smarthome items hold by the plugin
+        """
+        return self._smarthome_items
 
 
 class AVM(SmartPlugin):
@@ -697,7 +705,7 @@ class AVM(SmartPlugin):
                 self._update_myfritz(item)
         # empty response cache
         self._response_cache = dict()
-        
+
         # start Update of all smarthome devices
         self._update_aha_devices()
 
@@ -860,12 +868,12 @@ class AVM(SmartPlugin):
             if not self._monitoring_service is None:
                 self._monitoring_service.set_duration_item(item)
         # smarthome items using aha-interface
-        elif self.get_iattr_value(item.conf, 'avm_data_type') in ['device_id', 'manufacturer', 'product_name', 'fw_version', 'connected', 
-                                                                  'device_name', 'tx_busy', 'set_target_temperature', 'target_temperature', 
-                                                                  'current_temperature', 'temperature_reduced', 'temperature_comfort', 
-                                                                  'temperature_offset', 'set_hkrwindowopen', 'windowopenactiveendtime', 
-                                                                  'set_hkrboost', 'boost_active', 'boostactiveendtime', 'battery_low', 'battery_level', 
-                                                                  'lock', 'device_lock', 'window_open', 'summer_active', 'holiday_active', 'errorcode', 
+        elif self.get_iattr_value(item.conf, 'avm_data_type') in ['device_id', 'manufacturer', 'product_name', 'fw_version', 'connected',
+                                                                  'device_name', 'tx_busy', 'set_target_temperature', 'target_temperature',
+                                                                  'current_temperature', 'temperature_reduced', 'temperature_comfort',
+                                                                  'temperature_offset', 'set_hkrwindowopen', 'windowopenactiveendtime',
+                                                                  'set_hkrboost', 'boost_active', 'boostactiveendtime', 'battery_low', 'battery_level',
+                                                                  'lock', 'device_lock', 'window_open', 'summer_active', 'holiday_active', 'errorcode',
                                                                   'switch_state', 'switch_mode', 'switch_toggle', 'power', 'energy', 'voltage']:
             self.logger.debug(f"Item {item.id()} with smarthome attribut found; append to list")
             self._fritz_device._smarthome_items.append(item)
@@ -984,12 +992,12 @@ class AVM(SmartPlugin):
                 else:
                     self.logger.error(
                         'No avm_wlan_index attribute provided: %s' % self.get_iattr_value(item.conf, 'avm_data_type'))
-                        
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'tam':
                 headers['SOAPACTION'] = "%s#%s" % (self._urn_map['TAM'], action)
                 soap_data = self._assemble_soap_data(action, self._urn_map['TAM'],
                                                      {'NewIndex': 0, 'NewEnable': int(item())})
-                                                     
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'aha_device':
                 headers['SOAPACTION'] = "%s#%s" % (self._urn_map['Homeauto'], action)
                 # SwitchState: OFF, ON, TOGGLE, UNDEFINED
@@ -1008,13 +1016,13 @@ class AVM(SmartPlugin):
                     "/upnp/control/", self.get_iattr_value(item.conf, 'avm_data_type'),
                     self.get_iattr_value(item.conf, 'avm_wlan_index'))
                 url = self._build_url(param)
-                
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'tam':
                 url = self._build_url("/upnp/control/x_tam")
-                
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'aha_device':
                 url = self._build_url("/upnp/control/x_homeauto")
-          
+
             # Send command for TR064 interface
             try:
                 self._lua_session.post(url, data=soap_data, timeout=self._timeout, headers=headers,
@@ -1030,18 +1038,18 @@ class AVM(SmartPlugin):
                 self.set_device_availability(True)
 
             # check if item was guest wifi item and remaining time is set as item..
-            if self.get_iattr_value(item.conf, 'avm_data_type') == 'wlanconfig':  
+            if self.get_iattr_value(item.conf, 'avm_data_type') == 'wlanconfig':
                 for citem in self._fritz_device.get_items():  # search for guest time remaining item.
                     if self.get_iattr_value(citem.conf, 'avm_data_type') == 'wlan_guest_time_remaining' and self.get_iattr_value(citem.conf, 'avm_wlan_index') == self.get_iattr_value(item.conf, 'avm_wlan_index'):
                         self._response_cache.pop("wlanconfig_%s_%s" % (self.get_iattr_value(citem.conf, 'avm_wlan_index'), "X_AVM-DE_GetWLANExtInfo"), None)  # reset response cache
                         self._update_wlan_config(citem)  # immediately update remaining guest time
-                        
+
             # handle commands for aha interface
             if self.get_iattr_value(item.conf, 'avm_data_type') == 'set_hkrwindowopen':
                 self.logger.debug("hkrwindowopen caller is: {0}".format(caller))
                 cmd_hkrwindowopen = bool(item())
                 self.logger.debug(f"hkrwindowopen to be set to: {cmd_hkrwindowopen}")
-                
+
                 # get AIN
                 ainDevice = self._get_item_ain(item)
                 self.logger.info(f"Device AIN is {ainDevice}")
@@ -1055,35 +1063,35 @@ class AVM(SmartPlugin):
                     # set endtime to now + 12h:
                     endtime = int(unix_secs + 12 * 3600)
                 self.logger.debug(f"HKR endtimestamp is: {endtime}")
-                                
+
                 # write new value
                 self.set_hkr_windowopen(ainDevice, endtime)
-                
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'set_target_temperature':
                 self.logger.debug(f"set_temperature caller is: {caller}")
                 cmd_temperature = float(item())
                 self.logger.debug(f"new target temp to be set is: {cmd_temperature}.")
-                
+
                 #get AIN
                 ainDevice = self._get_item_ain(item)
                 self.logger.info(f"Device AIN is {ainDevice}")
-                
+
                 # write new target temp
                 self.set_target_temperature(ainDevice, cmd_temperature)
-                
+
                 # re-read new target temp
                 new_value = self.get_target_temperature(ainDevice)
                 self.logger.debug(f"new target set to: {new_value}.")
-                
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'set_hkrboost':
                 self.logger.debug(f"set_hkrboost caller is: {caller}")
                 cmd_hkrboost = bool(item())
                 self.logger.debug(f"hkrboost to be set to: {cmd_hkrboost}")
-                
+
                 # get AIN
                 ainDevice = self._get_item_ain(item)
                 self.logger.info(f"Device AIN is {ainDevice}")
-                
+
                 # Assemble endtimestamp:
                 if cmd_hkrboost == False:
                     endtime = 0
@@ -1093,35 +1101,35 @@ class AVM(SmartPlugin):
                     # set endtime to now + 12h:
                     endtime = int(unix_secs + 12 * 3600)
                 self.logger.debug("HKR boost endtimestamp is: {0}".format(endtime))
-                
+
                 # write new value
                 self.set_hkr_boost(ainDevice, endtime)
-                
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'switch_state':
                 self.logger.debug(f"switch_state caller is: {caller}")
                 cmd_switch_state = bool(item())
                 self.logger.debug(f"switch to be set to: {cmd_hkrboost}")
-                
+
                 # get AIN
                 ainDevice = self._get_item_ain(item)
                 self.logger.info(f"Device AIN is {ainDevice}")
-                
+
                 # write value
                 if cmd_switch_state is True:
                     self.set_switch_on(ainDevice)
                 else:
                     self.set_switch_off(ainDevice)
-                    
+
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'switch_toggle':
                 self.logger.debug(f"switch_toggle caller is: {caller}")
                 cmd_switch_toggle = bool(item())
                 self.logger.debug(f"switch to be set to: {cmd_hkrboost}")
-                
+
                 if cmd_switch_toggle == True:
                     # get AIN
                     ainDevice = self._get_item_ain(item)
                     self.logger.info(f"Device AIN is {ainDevice}")
-                    
+
                     # write value
                     self.set_switch_toggle(ainDevice)
 
@@ -2157,7 +2165,7 @@ class AVM(SmartPlugin):
             if ain not in self._fritz_device._smarthome_devices.keys():
                 self.logger.debug(f"Adding new Device with AIN {ain}")
                 self._fritz_device._smarthome_devices[ain] = {}
-            
+
             # general information of AVM smarthome device
             self._fritz_device._smarthome_devices[ain]['device_id'] = element.attrib['id']
             self._fritz_device._smarthome_devices[ain]['fw_version'] = element.attrib['fwversion']
@@ -2177,67 +2185,77 @@ class AVM(SmartPlugin):
             self._fritz_device._smarthome_devices[ain]['has_switch'] = has_switch
             self._fritz_device._smarthome_devices[ain]['has_thermostat'] = has_thermostat
             self._fritz_device._smarthome_devices[ain]['has_alarm'] = has_alarm
-            
+
             # optional general information of AVM smarthome device
             for child in element:
-                if child.tag == 'batterylow':
-                    self._fritz_device._smarthome_devices[ain]['battery_low'] = (child.text == '1')
-                elif child.tag == 'battery':
-                    self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.text)
-                elif child.tag == 'present':
-                    self._fritz_device._smarthome_devices[ain]['connected'] = (child.text == '1')
-                elif child.tag == 'txbusy':
-                    self._fritz_device._smarthome_devices[ain]['tx_busy'] = (child.text == '1')
-                elif child.tag == 'name':
-                    self._fritz_device._smarthome_devices[ain]['device_name'] = child.text
-            
+                if child.text is not None:
+                    if child.tag == 'batterylow':
+                        self._fritz_device._smarthome_devices[ain]['battery_low'] = (child.text == '1')
+                    elif child.tag == 'battery':
+                        self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.text)
+                    elif child.tag == 'present':
+                        self._fritz_device._smarthome_devices[ain]['connected'] = (child.text == '1')
+                    elif child.tag == 'txbusy':
+                        self._fritz_device._smarthome_devices[ain]['tx_busy'] = (child.text == '1')
+                    elif child.tag == 'name':
+                        self._fritz_device._smarthome_devices[ain]['device_name'] = child.text
+                else:
+                    self.logger.warning(f' Requested XML Tag does not contain an attribute')
+
             # information of AVM smarthome device having thermostat
             if has_thermostat is True:
                 hkr = element.find("hkr")
                 if hkr is not None:
                     # self._fritz_device._smarthome_devices[ain] = {}
                     for child in hkr:
-                        if child.tag == 'tist':
-                            self._fritz_device._smarthome_devices[ain]['current_temperature'] = (int(child.text) - 16) / 2 + 8
-                        elif child.tag == 'tsoll':
-                            self._fritz_device._smarthome_devices[ain]['target_temperature'] = (int(child.text) - 16) / 2 + 8
-                        elif child.tag == 'komfort':
-                            self._fritz_device._smarthome_devices[ain]['temperature_comfort'] = (int(child.text) - 16) / 2 + 8
-                        elif child.tag == 'absenk':
-                            self._fritz_device._smarthome_devices[ain]['temperature_reduced'] = (int(child.text) - 16) / 2 + 8
-                        elif child.tag == 'batterylow':
-                            self._fritz_device._smarthome_devices[ain]['battery_low'] = (child.text == '1')
-                        elif child.tag == 'battery':
-                            self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.text)
-                        elif child.tag == 'windowopenactiv':
-                            self._fritz_device._smarthome_devices[ain]['window_open'] = (child.text == '1')
-                        elif child.tag == 'summeractive':
-                            self._fritz_device._smarthome_devices[ain]['summer_active'] = (child.text == '1')
-                        elif child.tag == 'holidayactive':
-                            self._fritz_device._smarthome_devices[ain]['holiday_active'] = (child.text == '1')
-                        elif child.tag == 'boostactive':
-                            self._fritz_device._smarthome_devices[ain]['boost_active'] = (child.text == '1')
-                        elif child.tag == 'lock':
-                            self._fritz_device._smarthome_devices[ain]['lock'] = (child.text == '1')
-                        elif child.tag == 'devicelock':
-                            self._fritz_device._smarthome_devices[ain]['device_lock'] = (child.text == '1')
-                        elif child.tag == 'errorcode':
-                            self._fritz_device._smarthome_devices[ain]['errorcode'] = int(child.text)
-                        elif child.tag == 'windowopenactiveendtime':
-                            self._fritz_device._smarthome_devices[ain]['windowopenactiveendtime'] = int(child.text)
-                        elif child.tag == 'boostactiveendtime':
-                            self._fritz_device._smarthome_devices[ain]['boostactiveendtime'] = int(child.text)  
-            
+                        # self.logger.debug(f'Tag: {child.tag}, Attribut: {child.attrib}')
+                        if child.text is not None:
+                            if child.tag == 'tist':
+                                self._fritz_device._smarthome_devices[ain]['current_temperature'] = (int(child.text) - 16) / 2 + 8
+                            elif child.tag == 'tsoll':
+                                self._fritz_device._smarthome_devices[ain]['target_temperature'] = (int(child.text) - 16) / 2 + 8
+                            elif child.tag == 'komfort':
+                                self._fritz_device._smarthome_devices[ain]['temperature_comfort'] = (int(child.text) - 16) / 2 + 8
+                            elif child.tag == 'absenk':
+                                self._fritz_device._smarthome_devices[ain]['temperature_reduced'] = (int(child.text) - 16) / 2 + 8
+                            elif child.tag == 'batterylow':
+                                self._fritz_device._smarthome_devices[ain]['battery_low'] = (child.text == '1')
+                            elif child.tag == 'battery':
+                                self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.text)
+                            elif child.tag == 'windowopenactiv':
+                                self._fritz_device._smarthome_devices[ain]['window_open'] = (child.text == '1')
+                            elif child.tag == 'summeractive':
+                                self._fritz_device._smarthome_devices[ain]['summer_active'] = (child.text == '1')
+                            elif child.tag == 'holidayactive':
+                                self._fritz_device._smarthome_devices[ain]['holiday_active'] = (child.text == '1')
+                            elif child.tag == 'boostactive':
+                                self._fritz_device._smarthome_devices[ain]['boost_active'] = (child.text == '1')
+                            elif child.tag == 'lock':
+                                self._fritz_device._smarthome_devices[ain]['lock'] = (child.text == '1')
+                            elif child.tag == 'devicelock':
+                                self._fritz_device._smarthome_devices[ain]['device_lock'] = (child.text == '1')
+                            elif child.tag == 'errorcode':
+                                self._fritz_device._smarthome_devices[ain]['errorcode'] = int(child.text)
+                            elif child.tag == 'windowopenactiveendtime':
+                                self._fritz_device._smarthome_devices[ain]['windowopenactiveendtime'] = int(child.text)
+                            elif child.tag == 'boostactiveendtime':
+                                self._fritz_device._smarthome_devices[ain]['boostactiveendtime'] = int(child.text)
+                        else:
+                            self.logger.warning(f' Requested XML Tag does not contain an attribute')
+
             # information of AVM smarthome device having temperature sensor
             if has_temperature_sensor is True:
                 tempsensor = element.find("temperature")
                 if tempsensor is not None:
                     # self._fritz_device._smarthome_devices[ain]['temperature_sensor'] = {}
                     for child in tempsensor:
-                        if child.tag == 'celsius':
-                            self._fritz_device._smarthome_devices[ain]['current_temperature'] = int(child.text) / 10
-                        elif child.tag == 'offset':
-                            self._fritz_device._smarthome_devices[ain]['temperature_offset'] = int(child.text) / 10
+                        if child.text is not None:
+                            if child.tag == 'celsius':
+                                self._fritz_device._smarthome_devices[ain]['current_temperature'] = int(child.text) / 10
+                            elif child.tag == 'offset':
+                                self._fritz_device._smarthome_devices[ain]['temperature_offset'] = int(child.text) / 10
+                        else:
+                            self.logger.warning(f' Requested XML Tag does not contain an attribute')
 
             # information of AVM smarthome device having switch
             if has_switch is True:
@@ -2245,10 +2263,13 @@ class AVM(SmartPlugin):
                 if switch is not None:
                     # self._fritz_device._smarthome_devices[ain]['switch'] = {}
                     for child in switch:
-                        if child.tag == 'state':
-                            self._fritz_device._smarthome_devices[ain]['switch'] = int(child.text) / 10
-                        elif child.tag == 'mode':
-                            self._fritz_device._smarthome_devices[ain]['switch'] = child.text
+                        if child.text is not None:
+                            if child.tag == 'state':
+                                self._fritz_device._smarthome_devices[ain]['switch'] = int(child.text) / 10
+                            elif child.tag == 'mode':
+                                self._fritz_device._smarthome_devices[ain]['switch'] = child.text
+                        else:
+                            self.logger.warning(f' Requested XML Tag does not contain an attribute')
 
             # information of AVM smarthome device having powermeter
             if has_powermeter is True:
@@ -2256,16 +2277,22 @@ class AVM(SmartPlugin):
                 if powermeter is not None:
                     # self._fritz_device._smarthome_devices[ain]['powermeter'] = {}
                     for child in powermeter:
-                        if child.tag == 'power':
-                            self._fritz_device._smarthome_devices[ain]['power'] = child.text
-                        elif child.tag == 'energy':
-                            self._fritz_device._smarthome_devices[ain]['energy'] = child.text
-                        elif child.tag == 'voltage':
-                            self._fritz_device._smarthome_devices[ain]['voltage'] = child.text
-        # update items              
+                        if child.text is not None:
+                            if child.tag == 'power':
+                                self._fritz_device._smarthome_devices[ain]['power'] = child.text
+                            elif child.tag == 'energy':
+                                self._fritz_device._smarthome_devices[ain]['energy'] = child.text
+                            elif child.tag == 'voltage':
+                                self._fritz_device._smarthome_devices[ain]['voltage'] = child.text
+                        else:
+                            self.logger.warning(f' Requested XML Tag does not contain an attribute')
+
+        # update items
         self._update_smarthome_items()
 
     def _update_aha_devices_minidom(self):
+        ## ToDo: bei leeren Batterien ist das Attribut im XLM leer. In der Version mit ElementTree ist das bereits abgefangen
+    
         self.logger.debug("Updating AHA Devices ...")
 
         for element in self._get_aha_device_elements():
@@ -2273,7 +2300,7 @@ class AVM(SmartPlugin):
             if ain not in self._fritz_device._smarthome_devices.keys():
                 self.logger.debug(f"Adding new Device with AIN {ain}")
                 self._fritz_device._smarthome_devices[ain] = {}
-            
+
             # general information of AVM smarthome device
             self._fritz_device._smarthome_devices[ain]['device_id'] = element.getAttribute('id')
             self._fritz_device._smarthome_devices[ain]['fw_version'] = element.getAttribute('fwversion')
@@ -2293,22 +2320,22 @@ class AVM(SmartPlugin):
             self._fritz_device._smarthome_devices[ain]['has_switch'] = has_switch
             self._fritz_device._smarthome_devices[ain]['has_thermostat'] = has_thermostat
             self._fritz_device._smarthome_devices[ain]['has_alarm'] = has_alarm
-            
+
             element.getElementsByTagName('present')[0].firstChild.data
-            element.getElementsByTagName('batterylow')[0].firstChild.data            
-            
+            element.getElementsByTagName('batterylow')[0].firstChild.data
+
             # optional general information of AVM smarthome device
             self._fritz_device._smarthome_devices[ain]['battery_low'] = bool(int(element.getElementsByTagName('batterylow')[0].firstChild.data))
             self._fritz_device._smarthome_devices[ain]['battery_level'] = int(element.getElementsByTagName('battery')[0].firstChild.data)
             self._fritz_device._smarthome_devices[ain]['connected'] = bool(int(element.getElementsByTagName('present')[0].firstChild.data))
             self._fritz_device._smarthome_devices[ain]['tx_busy'] = bool(int(element.getElementsByTagName('txbusy')[0].firstChild.data))
             self._fritz_device._smarthome_devices[ain]['device_name'] = str(element.getElementsByTagName('name')[0].firstChild.data)
-            
+
             # information of AVM smarthome device having thermostat
             if has_thermostat is True:
                 hkr = element.getElementsByTagName('hkr')
                 if hkr is not None:
-                    for child in hkr_node:
+                    for child in hkr:
                         self._fritz_device._smarthome_devices[ain]['current_temperature'] = (int(child.getElementsByTagName('tist')[0].firstChild.data) - 16) / 2 + 8
                         self._fritz_device._smarthome_devices[ain]['target_temperature'] = (int(child.getElementsByTagName('tsoll')[0].firstChild.data) - 16) / 2 + 8
                         self._fritz_device._smarthome_devices[ain]['temperature_comfort'] = (int(child.getElementsByTagName('komfort')[0].firstChild.data) - 16) / 2 + 8
@@ -2354,16 +2381,19 @@ class AVM(SmartPlugin):
         for item in self._fritz_device._smarthome_items:
             # get AIN
             ainDevice = self._get_item_ain(item)
-            
+
             # get device sub-dict from dict
             device = self._fritz_device._smarthome_devices[ainDevice]
-            
+
             # get avm_data_type of item
             current_avm_data_type = self.get_iattr_value(item.conf, 'avm_data_type')
-          
+
             # set item value for relevant (non-set) items #Dict-Key muss dem avm_data_type entsprechen
             if not current_avm_data_type.startswith('set_') and current_avm_data_type not in ['switch_toggle']:
-                item(device[current_avm_data_type], self.get_shortname())   
+                if device.get(current_avm_data_type):
+                    item(device[current_avm_data_type], self.get_shortname())
+                else:
+                    self.logger.warning(f'Attribute to be set to Item <{item}> not available.')
 
     def _get_aha_devices_as_dict(self):
         """Get the dict of all known devices."""
@@ -2446,10 +2476,10 @@ class AVM(SmartPlugin):
         """Get device statistics."""
         plain = self._aha_request("getbasicdevicestats", ain=ain)
         return plain
-        
+
     def set_hkr_boost(self, ain, endtimestamp):
         self._aha_request("sethkrboost", ain=ain, param={endtimestamp})
-        
+
     def set_hkr_windowopen(self, ain, endtimestamp):
         self._aha_request("sethkrwindowopen", ain=ain, param={endtimestamp})
 
@@ -3013,6 +3043,153 @@ class AVM(SmartPlugin):
                 data = xml[0].firstChild.data
         return data
 
+    def get_number_of_deflections(self):
+        """
+        Get the number of deflection entrys
+        | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
+        :return: TBD
+        """
+        url = self._build_url("/upnp/control/x_contact")
+        headers = self._header.copy()
+        action = "GetNumberOfDeflections"
+        headers['SOAPACTION'] = "%s#%s" % (self._urn_map['OnTel'], action)
+        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'])
+
+        try:
+            response = self._session.post(url, data=soap_data, timeout=self._timeout, headers=headers,
+                                          auth=HTTPDigestAuth(self._fritz_device.get_user(),
+                                                              self._fritz_device.get_password()), verify=self._verify)
+            xml = minidom.parseString(response.content)
+        except Exception as e:
+            if self._fritz_device.is_available():
+                self.logger.error("Exception when sending POST request or parsing response: %s" % str(e))
+                self.set_device_availability(False)
+            return
+        if not self._fritz_device.is_available():
+            self.set_device_availability(True)
+
+        data = self._get_value_from_xml_node(xml, 'NewNumberOfDeflections')
+        self.logger.debug(f'get_number_of_deflections response is: {data}')
+
+    def get_deflection(self, deflection_id = 0):
+        """
+        Get the parameter for a deflection entry.
+        DeflectionID is in the range of 0 .. NumberOfDeflections-1.
+        | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
+        :param: deflection_id (default: 0)
+        :return: TBD
+        """
+        url = self._build_url("/upnp/control/x_contact")
+        headers = self._header.copy()
+        action = "GetDeflection"
+        headers['SOAPACTION'] = "%s#%s" % (self._urn_map['OnTel'], action)
+        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'], {'NewDeflectionId': deflection_id})
+
+        try:
+            response = self._session.post(url, data=soap_data, timeout=self._timeout, headers=headers,
+                                          auth=HTTPDigestAuth(self._fritz_device.get_user(),
+                                                              self._fritz_device.get_password()), verify=self._verify)
+            xml = minidom.parseString(response.content)
+        except Exception as e:
+            if self._fritz_device.is_available():
+                self.logger.error("Exception when sending POST request or parsing response: %s" % str(e))
+                self.set_device_availability(False)
+            return
+        if not self._fritz_device.is_available():
+            self.set_device_availability(True)
+            
+        deflection = {}
+        deflection[deflection_id] = {}
+        
+        attributes = ['NewEnable', 'NewType', 'NewNumber', 'NewDeflectionToNumber', 'NewMode', 'NewOutgoing', 'NewPhonebookID']
+        for attribute in attributes:
+            data = self._get_value_from_xml_node(xml, attribute)
+            if data:
+                attribute = attribute[3:]
+                deflection[deflection_id][attribute] = data
+        self.logger.debug(deflection)
+
+    def get_deflections(self):
+        """
+        Returns a list of deflecttions
+        | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
+        :return: TBD
+        """
+        url = self._build_url("/upnp/control/x_contact")
+        headers = self._header.copy()
+        action = "GetDeflections"
+        headers['SOAPACTION'] = "%s#%s" % (self._urn_map['OnTel'], action)
+        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'])
+
+        try:
+            response = self._session.post(url, data=soap_data, timeout=self._timeout, headers=headers,
+                                          auth=HTTPDigestAuth(self._fritz_device.get_user(),
+                                                              self._fritz_device.get_password()), verify=self._verify)
+            xml = minidom.parseString(response.content)
+        except Exception as e:
+            if self._fritz_device.is_available():
+                self.logger.error("Exception when sending POST request or parsing response: %s" % str(e))
+                self.set_device_availability(False)
+            return
+        if not self._fritz_device.is_available():
+            self.set_device_availability(True)
+
+        # self.logger.debug(f'get_deflections response is: {response}')
+        
+        deflection_list_xml = minidom.parseString(xml.getElementsByTagName('NewDeflectionList')[0].firstChild.data)
+        item_list = deflection_list_xml.getElementsByTagName('Item')
+        # self.logger.debug(f'item_list: {item_list}')
+        
+        deflections = {}
+        if len(item_list) > 0:
+            for item in item_list:
+                deflection_id = int(item.getElementsByTagName('DeflectionId')[0].firstChild.data)
+                deflections[deflection_id] = {}
+
+                attributes = ['Enable', 'Type', 'Number', 'DeflectionToNumber', 'Mode', 'Outgoing', 'PhonebookID']
+                for attribute in attributes:
+                    attribute_value = item.getElementsByTagName(attribute)
+                    if len(attribute_value) > 0:
+                        if attribute_value[0].hasChildNodes():
+                            deflections[deflection_id][attribute] = attribute_value[0].firstChild.data
+            
+        self.logger.debug(deflections)
+            
+    def set_deflection_enable(self, deflection_id=0, new_enable=0):
+        """
+        Enable or disable a deflection.
+        DeflectionID is in the range of 0 .. NumberOfDeflections-1
+        | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
+        :param: deflection_id (default: 0)
+        :param new_enable (default: 0)
+        :return: TBD
+        """
+        url = self._build_url("/upnp/control/x_contact")
+        headers = self._header.copy()
+        action = "SetDeflectionEnable"
+        headers['SOAPACTION'] = "%s#%s" % (self._urn_map['OnTel'], action)
+        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'], {'NewDeflectionId': deflection_id, 'NewEnable': new_enable})
+        self.logger.debug(f'set_deflection_enable soap_data: {soap_data}')
+
+        try:
+            response = self._session.post(url, data=soap_data, timeout=self._timeout, headers=headers,
+                                          auth=HTTPDigestAuth(self._fritz_device.get_user(),
+                                                              self._fritz_device.get_password()), verify=self._verify)
+        except Exception as e:
+            if self._fritz_device.is_available():
+                self.logger.error("Exception when sending POST request or parsing response: %s" % str(e))
+                self.set_device_availability(False)
+            return
+        if not self._fritz_device.is_available():
+            self.set_device_availability(True)
+            
+        self.logger.debug(f'set_deflection_enable response is: {response}')
+        
+        if response == '<Response [200]>':
+            self.logger.debug(f'set_deflection_enable successfully set deflection_id <{deflection_id}> to {new_enable}')
+        else:
+            self.logger.warning(f'set_deflection_enable set deflection_id <{deflection_id}> to {new_enable} failed')
+
     def init_webinterface(self):
         """"
         Initialize the web interface for this plugin
@@ -3083,7 +3260,7 @@ class WebInterface(SmartPluginWebIf):
         call_monitor_items = 0
         if self.plugin._call_monitor:
             call_monitor_items = self.plugin._monitoring_service.get_item_count_total()
-            tabcount = 4
+            tabcount = 5
 
         tmpl = self.tplenv.get_template('index.html')
         return tmpl.render(plugin_shortname=self.plugin.get_shortname(), plugin_version=self.plugin.get_version(),
