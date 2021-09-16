@@ -3047,7 +3047,7 @@ class AVM(SmartPlugin):
         """
         Get the number of deflection entrys
         | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
-        :return: TBD
+        :return: number of deflections
         """
         url = self._build_url("/upnp/control/x_contact")
         headers = self._header.copy()
@@ -3069,7 +3069,9 @@ class AVM(SmartPlugin):
             self.set_device_availability(True)
 
         data = self._get_value_from_xml_node(xml, 'NewNumberOfDeflections')
+        
         self.logger.debug(f'get_number_of_deflections response is: {data}')
+        return data 
 
     def get_deflection(self, deflection_id = 0):
         """
@@ -3077,7 +3079,7 @@ class AVM(SmartPlugin):
         DeflectionID is in the range of 0 .. NumberOfDeflections-1.
         | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
         :param: deflection_id (default: 0)
-        :return: TBD
+        :return: dict with all deflection details of deflection_id
         """
         url = self._build_url("/upnp/control/x_contact")
         headers = self._header.copy()
@@ -3107,13 +3109,15 @@ class AVM(SmartPlugin):
             if data:
                 attribute = attribute[3:]
                 deflection[deflection_id][attribute] = data
-        self.logger.debug(deflection)
+                
+        self.logger.debug(f'get_deflection response is: {deflection}')
+        return deflection
 
     def get_deflections(self):
         """
         Returns a list of deflecttions
         | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
-        :return: TBD
+        :return: dict with all deflection details
         """
         url = self._build_url("/upnp/control/x_contact")
         headers = self._header.copy()
@@ -3152,23 +3156,23 @@ class AVM(SmartPlugin):
                     if len(attribute_value) > 0:
                         if attribute_value[0].hasChildNodes():
                             deflections[deflection_id][attribute] = attribute_value[0].firstChild.data
+        
+        self.logger.debug(f'get_deflections response is: {deflections}')
+        return deflections        
             
-        self.logger.debug(deflections)
-            
-    def set_deflection_enable(self, deflection_id=0, new_enable=0):
+    def set_deflection_enable(self, deflection_id=0, new_enable=False):
         """
         Enable or disable a deflection.
         DeflectionID is in the range of 0 .. NumberOfDeflections-1
         | Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_contactSCPD.pdf
         :param: deflection_id (default: 0)
-        :param new_enable (default: 0)
-        :return: TBD
+        :param new_enable (default: False)
         """
         url = self._build_url("/upnp/control/x_contact")
         headers = self._header.copy()
         action = "SetDeflectionEnable"
         headers['SOAPACTION'] = "%s#%s" % (self._urn_map['OnTel'], action)
-        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'], {'NewDeflectionId': deflection_id, 'NewEnable': new_enable})
+        soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'], {'NewDeflectionId': deflection_id, 'NewEnable': int(new_enable)})
         self.logger.debug(f'set_deflection_enable soap_data: {soap_data}')
 
         try:

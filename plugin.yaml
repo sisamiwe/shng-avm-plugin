@@ -764,29 +764,41 @@ plugin_functions:
     get_number_of_deflections:
         type: bool
         description:
-            de: ""
-            en: ""
-    
+            de: "Liefert die Anzahl der Rufumleitungen zurück."
+            en: "Provides Number of set deflections."
+            
     get_deflection:
         type: bool
         description:
-            de: ""
-            en: ""
+            de: "Liefert die Details der Rufumleitung der angegebenen ID zurück (Default-ID = 0)"
+            en: "Provides details of deflection with given deflection_id (default id = 0)"
+        parameters:
+            deflection_id:
+                type: int
+                description:
+                    de: "Identifikator der abzufragenden Rufumleitung."
+                    en: "identifier of deflection."
     
     get_deflections:
         type: bool
         description:
-            de: ""
-            en: ""
+            de: "Liefert die Details aller Rufumleitungen zurück."
+            en: "Provides details of all deflections."
     
     set_deflection_enable:
         type: bool
         description:
-            de: ""
-            en: ""
+            de: "Schaltet die Rufumleitung mit angegebener ID an oder aus."
+            en: "Enables or disables deflection with given ID."
         parameters:
-            phone_number:
+            deflection_id:
+                type: int
+                description:
+                    de: "Identifikator der abzufragenden Rufumleitung."
+                    en: "identifier of deflection."
+            enable:
                 type: bool
                 description:
-                    de: ""
-                    en: ""
+                    de: "An / Aus"
+                    en: "Enable / Disable"
+            
