@@ -521,13 +521,20 @@ class FritzDevice:
         """
         return self._smarthome_items
 
+    def get_smarthome_devices(self):
+        """
+        Returns added items
+
+        :return: dict of smarthome devices hold by the plugin
+        """
+        return self._smarthome_devices
 
 class AVM(SmartPlugin):
     """
     Main class of the Plugin. Does all plugin specific stuff and provides the update functions for the different TR-064 services on the FritzDevice
     """
 
-    PLUGIN_VERSION = "1.5.11"
+    PLUGIN_VERSION = "1.5.12"
 
     _header = {'SOAPACTION': '', 'CONTENT-TYPE': 'text/xml; charset="utf-8"'}
     _envelope = """
@@ -3260,11 +3267,11 @@ class WebInterface(SmartPluginWebIf):
 
         :return: contents of the template after beeing rendered
         """
-        tabcount = 3
+        tabcount = 5
         call_monitor_items = 0
         if self.plugin._call_monitor:
             call_monitor_items = self.plugin._monitoring_service.get_item_count_total()
-            tabcount = 5
+            tabcount = 6
 
         tmpl = self.tplenv.get_template('index.html')
         return tmpl.render(plugin_shortname=self.plugin.get_shortname(), plugin_version=self.plugin.get_version(),

@@ -12,7 +12,7 @@ plugin:
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
     support: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-    version: 1.5.11                # Plugin version
+    version: 1.5.12                # Plugin version
     sh_minversion: 1.6             # minimum shNG version to use this plugin
 #    sh_maxversion:                # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: True           # plugin supports multi instance
@@ -765,13 +765,15 @@ plugin_functions:
         type: bool
         description:
             de: "Liefert die Anzahl der Rufumleitungen zurück."
-            en: "Provides Number of set deflections."
+            en: "Returns Number of set deflections."
+        parameters:
+        # This function has no parameters
             
     get_deflection:
         type: bool
         description:
             de: "Liefert die Details der Rufumleitung der angegebenen ID zurück (Default-ID = 0)"
-            en: "Provides details of deflection with given deflection_id (default id = 0)"
+            en: "Returns details of deflection with given deflection_id (default id = 0)"
         parameters:
             deflection_id:
                 type: int
@@ -783,7 +785,9 @@ plugin_functions:
         type: bool
         description:
             de: "Liefert die Details aller Rufumleitungen zurück."
-            en: "Provides details of all deflections."
+            en: "Returns details of all deflections."
+        parameters:
+        # This function has no parameters
     
     set_deflection_enable:
         type: bool
@@ -801,4 +805,4 @@ plugin_functions:
                 description:
                     de: "An / Aus"
                     en: "Enable / Disable"
-            
+                    
