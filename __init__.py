@@ -1058,7 +1058,7 @@ class AVM(SmartPlugin):
                 if wlan_index >= 0:
                     self.set_tam(wlan_index, bool(item()))
                 else:
-                    self.logger.error('Parameter <avm_deflection_index> for item not defined in item.conf')
+                    self.logger.error('Parameter <avm_wlan_index> for item not defined in item.conf')
 
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'tam':
                 tam_index = None
@@ -1071,7 +1071,7 @@ class AVM(SmartPlugin):
                 if tam_index >= 0:
                     self.set_tam(tam_index, bool(item()))
                 else:
-                    self.logger.error('Parameter <avm_deflection_index> for item not defined in item.conf')
+                    self.logger.error('Parameter <avm_tam_index> for item not defined in item.conf')
 
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'aha_device':
                 if self.has_iattr(item.conf, 'ain'):
@@ -2251,15 +2251,27 @@ class AVM(SmartPlugin):
             self._fritz_device._smarthome_devices[ain]['has_thermostat'] = has_thermostat
             self._fritz_device._smarthome_devices[ain]['has_alarm'] = has_alarm
 
-            element.getElementsByTagName('present')[0].firstChild.data
-            element.getElementsByTagName('batterylow')[0].firstChild.data
-
             # optional general information of AVM smarthome device
-            self._fritz_device._smarthome_devices[ain]['battery_low'] = bool(int(element.getElementsByTagName('batterylow')[0].firstChild.data))
-            self._fritz_device._smarthome_devices[ain]['battery_level'] = int(element.getElementsByTagName('battery')[0].firstChild.data)
-            self._fritz_device._smarthome_devices[ain]['connected'] = bool(int(element.getElementsByTagName('present')[0].firstChild.data))
-            self._fritz_device._smarthome_devices[ain]['tx_busy'] = bool(int(element.getElementsByTagName('txbusy')[0].firstChild.data))
-            self._fritz_device._smarthome_devices[ain]['device_name'] = str(element.getElementsByTagName('name')[0].firstChild.data)
+            try:
+                self._fritz_device._smarthome_devices[ain]['batterylow'] = bool(int(element.getElementsByTagName('batterylow')[0].firstChild.data))
+            except:
+                self.logger.debug(f'DECT Smarthome Device with AIN {ain} does not support Attribute {"batterylow"}.')
+            try:
+                self._fritz_device._smarthome_devices[ain]['battery_level'] = int(element.getElementsByTagName('battery')[0].firstChild.data)
+            except:
+                self.logger.debug(f'DECT Smarthome Device with AIN {ain} does not support Attribute "battery".')
+            try:
+                self._fritz_device._smarthome_devices[ain]['connected'] = bool(int(element.getElementsByTagName('present')[0].firstChild.data))
+            except:
+                self.logger.debug(f'DECT Smarthome Device with AIN {ain} does not support Attribute "present".')
+            try:
+                self._fritz_device._smarthome_devices[ain]['tx_busy'] = bool(int(element.getElementsByTagName('txbusy')[0].firstChild.data))
+            except:
+                self.logger.debug(f'DECT Smarthome Device with AIN {ain} does not support Attribute "txbusy".')
+            try:
+                self._fritz_device._smarthome_devices[ain]['device_name'] = str(element.getElementsByTagName('name')[0].firstChild.data)
+            except:
+                self.logger.debug(f'DECT Smarthome Device with AIN {ain} does not support Attribute "name".')
 
             # information of AVM smarthome device having thermostat
             if has_thermostat is True:
@@ -2954,7 +2966,7 @@ class AVM(SmartPlugin):
 
     def _update_deflection(self, item):
         if self.has_iattr(item.conf, 'avm_deflection_index'):
-            deflection_index = int(self.get_iattr_value(item.conf, 'avm_deflection_index'))
+            deflection_index = int(self.get_iattr_value(item.conf, 'avm_deflection_index')) -1
             if deflection_index >= 0:
                 result = self.get_deflection(deflection_index)
                 if result is not None:
@@ -2968,7 +2980,7 @@ class AVM(SmartPlugin):
 
     def _update_deflection_status(self, item):
         if self.has_iattr(item.conf, 'avm_deflection_index'):
-            deflection_index = int(self.get_iattr_value(item.conf, 'avm_deflection_index'))
+            deflection_index = int(self.get_iattr_value(item.conf, 'avm_deflection_index')) -1
             if deflection_index >= 0:
                 deflection = self.get_deflection(deflection_index)
                 if deflection is not None:

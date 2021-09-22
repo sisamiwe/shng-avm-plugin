@@ -1,7 +1,7 @@
 .. index:: Plugins; AVM (Unterstützung für Fritz!Box usw.)
 .. index:: AVM
 
-avm
+AVM
 ###
 
 Changelog
@@ -14,6 +14,13 @@ Changelog
 - Funktionen für Rufumleitungen hinzugefügt
 - Plugin Parameter "index" in "avm_tam_index" umbenannt
 - Code Cleanup
+
+Allgemeine Informationen
+========================
+
+Im Plugin wird das TR-064 Protokoll und das AHA Protokoll verwendet.
+
+Unterstützung erhält man im Forum unter: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
 
 Konfiguration der Fritz!Box
@@ -120,19 +127,19 @@ Index für die Rufumleitung, normalerweise für die erste eine "1".'
 item_structs
 ============
 Zur Vereinfachung der Einrichtung von Items sind für folgende Item-structs vordefiniert:
- - info  -  General Information about Fritzbox
- - monitor  -  Coll Monitor
- - tam  -  (für einen) Anrufbeantworter
- - deflection  -  (für eine) Rufumleitung
- - wan  -  WAN Items
- - wlan  -  Wireless Lan Items
- - device  -  Item eines verbundenen Gerätes
- - smarthome_general  -  Allgemeine Informationen eines DECT smarthome Devices
- - smarthome_hkr  -  spezifische Informationen eines DECT Thermostat Devices
- - smarthome_temperatur_sensor  -  spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
- - smarthome_alert  -  spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
- - smarthome_switch  -  spezifische Informationen eines DECT smarthome Devices mit Schalter
- - smarthome_powermeter  -  spezifische Informationen eines DECT smarthome Devices mit Strommessung
+  - `info`  -  General Information about Fritzbox
+  - `monitor`  -  Coll Monitor
+  - `tam`  -  (für einen) Anrufbeantworter
+  - `deflection`  -  (für eine) Rufumleitung
+  - `wan`  -  WAN Items
+  - `wlan`  -  Wireless Lan Items
+  - `device`  -  Item eines verbundenen Gerätes
+  - `smarthome_general`  -  Allgemeine Informationen eines DECT smarthome Devices
+  - `smarthome_hkr`  -  spezifische Informationen eines DECT Thermostat Devices
+  - `smarthome_temperatur_sensor`  -  spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
+  - `smarthome_alert`  -  spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
+  - `smarthome_switch`  -  spezifische Informationen eines DECT smarthome Devices mit Schalter
+  - `smarthome_powermeter`  -  spezifische Informationen eines DECT smarthome Devices mit Strommessung
 
 Item Beispiel mit Verwendung der structs
 ----------------------------------------
@@ -196,23 +203,37 @@ Item Beispiel mit Verwendung der structs
                   - avm.smarthome_hkr
                   - avm.smarthome_temperatur_sensor
 
+
 Plugin Funktionen
 =================
 
 cancel_call
 -----------
+
 Beendet einen aktiven Anruf.
 
 get_call_origin
 ---------------
+
 Gib den Namen des Telefons zurück, das aktuell als 'call origin' gesetzt ist.
+
+.. code:: python
+
+    phone_name = sh.fritzbox_7490.get_call_origin()
+
+
+CURL for this function:
+.. code:: bash
+
+    curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/x_voip" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:X_VoIP:1#X_AVM-DE_DialGetConfig" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:X_AVM-DE_DialGetConfig xmlns:u='urn:dslforum-org:service:X_VoIP:1' /></s:Body></s:Envelope>" -s -k
+
 
 get_calllist
 ------------
 Ermittelt ein Array mit dicts aller Einträge der Anrufliste (Attribute 'Id', 'Type', 'Caller', 'Called', 'CalledNumber', 'Name', 'Numbertype', 'Device', 'Port', 'Date',' Duration' (einige optional)).
 
-get_contact_name_by_phone_number
---------------------------------
+get_contact_name_by_phone_number(phone_number)
+----------------------------------------------
 Durchsucht das Telefonbuch mit einer (vollständigen) Telefonnummer nach Kontakten. Falls kein Name gefunden wird, wird die Telefonnummer zurückgeliefert.
 
 get_device_log_from_lua
@@ -226,22 +247,82 @@ Ermittelt die Logeinträge auf dem Gerät über die TR-064 Schnittstelle.
 get_host_details
 ----------------
 Ermittelt die Informationen zu einem Host an einem angegebenen Index.
+dict keys: name, interface_type, ip_address, mac_address, is_active, lease_time_remaining
 
 get_hosts
 ---------
-Ermittelt ein Array mit den Namen aller verbundener Hosts.
+Ermittelt ein Array mit den Details aller verbundenen Hosts. Verwendet wird die Funktion "get_host_details"
+
+Beispiel einer Logik, die die Host von 3 verbundenen Geräten in eine Liste zusammenführt und in ein Item schreibt.
+'avm.devices.device_list'
+
+.. code:: python
+
+    hosts = sh.fritzbox_7490.get_hosts(True)
+    hosts_300 = sh.wlan_repeater_300.get_hosts(True)
+    hosts_1750 = sh.wlan_repeater_1750.get_hosts(True)
+
+    for host_300 in hosts_300:
+        new = True
+        for host in hosts:
+            if host_300['mac_address'] == host['mac_address']:
+                new = False
+        if new:
+            hosts.append(host_300)
+    for host_1750 in hosts_1750:
+        new = True
+        for host in hosts:
+            if host_1750['mac_address'] == host['mac_address']:
+                new = False
+        if new:
+            hosts.append(host_1750)
+
+    string = '<ul>'
+    for host in hosts:
+        device_string = '<li><strong>'+host['name']+':</strong> '+host['ip_address']+', '+host['mac_address']+'</li>'
+        string += device_string
+
+    string += '</ul>'
+    sh.avm.devices.device_list(string)
 
 get_phone_name
 --------------
 Gibt den Namen eines Telefons an einem Index zurück. Der zurückgegebene Wert kann in 'set_call_origin' verwendet werden.
 
-get_phone_numbers_by_name
--------------------------
+.. code:: python
+
+    phone_name = sh.fb1.get_phone_name(1)
+
+
+get_phone_numbers_by_name(name)
+-------------------------------
 Durchsucht das Telefonbuch mit einem Namen nach nach Kontakten und liefert die zugehörigen Telefonnummern.
+
+.. code:: python
+
+    result_numbers = sh.fritzbox_7490.get_phone_numbers_by_name('Mustermann')
+    result_string = ''
+    keys = {'work': 'Geschäftlich', 'home': 'Privat', 'mobile': 'Mobil', 'fax_work': 'Fax', 'intern': 'Intern'}
+    for contact in result_numbers:
+        result_string += '<p><h2>'+contact+'</h2>'
+        i = 0
+        result_string += '<table>'
+        while i < len(result_numbers[contact]):
+            number = result_numbers[contact][i]['number']
+            type_number = keys[result_numbers[contact][i]['type']]
+            result_string += '<tr><td>' + type_number + ':</td><td><a href="tel:' + number + '" style="font-weight: normal;">' + number + '</a></td></tr>'
+            i += 1
+        result_string += '</table></p>'
+    sh.general_items.number_search_results(result_string)
 
 is_host_active
 --------------
 Prüft, ob eine MAC Adresse auf dem Gerät aktiv ist. Das kann bspw. für die Umsetzung einer Präsenzerkennung genutzt werden.
+
+CURL for this function:
+.. code:: bash
+
+    curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/hosts" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:Hosts:1#GetSpecificHostEntry" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:GetSpecificHostEntry xmlns:u='urn:dslforum-org:service:Hosts:1'><s:NewMACAddress>XX:XX:XX:XX:XX:XX</s:NewMACAddress></u:GetSpecificHostEntry></s:Body></s:Envelope>" -s -k
 
 reboot
 ------
@@ -253,14 +334,25 @@ Verbindet das Gerät neu mit dem WAN (Wide Area Network).
 
 set_call_origin
 ---------------
-Setzt den 'call origin', bspw. vor dem Aufruf von 'start_call'.
+Setzt den 'call origin', bspw. vor dem Aufruf von 'start_call'. Typischerweise genutzt vor der Verwendung von "start_call".
+Der Origin kann auch mit direkt am Fritzdevice eingerichtet werden: "Telefonie -> Anrufe -> Wählhilfe verwenden -> Verbindung mit dem Telefon".
+
+.. code:: python
+
+    sh.fb1.set_call_origin("<phone_name>")
 
 start_call
 ----------
 Startet einen Anruf an eine übergebene Telefonnummer (intern oder extern).
 
-wol
----
+.. code:: python
+
+    sh.fb1.start_call('0891234567')
+    sh.fb1.start_call('**9')
+
+
+wol(mac_address)
+----------------
 Sendet einen WOL (WakeOnLAN) Befehl an eine MAC Adresse.
 
 get_number_of_deflections

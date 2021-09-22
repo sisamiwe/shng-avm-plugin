@@ -1,33 +1,43 @@
 # AVM
 
-## Description
-The AVM Plugin can be used to connect to a device from AVM (e.g. the Fritzbox). You can control functionality and read data from the device. Moreover you can connect to the live call monitor and monitor incoming or outgoing calls and trigger items based on these events.
+## Changelog
 
-## Requirements
-This plugin requires lib requests. You can install this lib with:
+### 1.6.0
+- Anbindung der Smarthome Devices über AHA-Interface hinzugefügt
+- Funktionen für Rufumleitungen hinzugefügt
+- Plugin Parameter "index" in "avm_tam_index" umbenannt
+- Code Cleanup
 
-```
-sudo pip3 install requests --upgrade
-```
 
-It is completely based on the TR-064 interface from AVM (http://avm.de/service/schnittstellen/)
+## Allgemeine Informationen
 
-Forum thread to the plugin: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
+Im Plugin wird das TR-064 Protokoll und das AHA Protokoll verwendet.
 
-Version 1.1.2 tested with a FRITZ!Box 7490 (FRITZ!OS 06.51), a FRITZ! WLAN Repeater 1750E (FRITZ!OS 06.32) and a
-WLAN Repeater 300E (FRITZ!OS 06.30). It was also tested with a FRITZ!Box 7390 with FW 84.06.36 and a Fritz!Box 7390
-with v6.30 und v6.51.
+Unterstützung erhält man im Forum unter: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-The avm_data_types listed in the example items under "devices" only work correctly with firmware <= v6.30, if the
-FRITZ!Box does not handle more than 16 devices in parallel (under "Heimnetz/Netzwerk"). Otherwise some of the devices
-won't work.
 
-The MonitoringService currently does not support multiple parallel incoming or outgoing calls. For being able to
-connect to the FritzDevice's CallMonitor, you have to activate it, by typing `#96*5*` on a directly connected phone.
+## Konfiguration der Fritz!Box
 
-The version is tested with new multi-instance functionality of SmartHomeNG.
+Für die Nutzung der Informationen über Telefonereignisse muss der CallMonitor aktiviert werden. Dazu muss auf einem direkt an die Fritz!Box angeschlossenen Telefon (Analog, ISDN S0 oder DECT) *96#5# eingegeben werden.
 
-## Configuration
+Bei neueren Firmware Versionen (ab Fritz!OS v7) Muss die Anmeldung an der Box von "nur mit Kennwort" auf "Benutzername und Kennwort umgestellt werden" und es sollte ein eigener User für das AVM Plugin auf der Fritz!Box eingerichtet werden.
+
+
+## Konfiguration des Plugins
+
+Die Konfigruation des Plugins erfolgt über das Admin-Inteface. Dafür stehen die folgenden Einstellungen zur Verfügung:
+
+  * `username`: Optional login information
+  * `password`: Required login information
+  * `host`: Hostname or ip address of the FritzDevice.
+  * `port`: Port of the FritzDevice, typically 49433 for https or 49000 for http
+  * `cycle`: timeperiod between two update cycles. Default is 300 seconds.
+  * `ssl`: True or False => True will add "https", False "http" to the URLs in the plugin
+  * `verify`: True or False => Turns certificate verification on or off. Typically False
+  * `call_monitor`: True or False => Activates or deactivates the MonitoringService, which connects to the FritzDevice's call monitor
+  * `instance`: Unique identifier for each FritzDevice / each instance of the plugin
+
+Alternativ kann das Plugin auch manuell konfiguriert werden.
 
 ### plugin.yaml
 
@@ -60,648 +70,133 @@ fb2:
     instance: wlan_repeater_1750
 ```
 
-Note: Depending on the FritzDevice a shorter cycle time can result in problems with CPU rating and, in consequence with the accessibility of the webservices on the device.
-If cycle time is reduced, please carefully watch your device and your sh.log. In the development process, 120 Seconds also worked worked fine on the used devices.
+Hinweis: Abhängig vom Fritz-Gerät kann eine kürzere Zykluszeit zu Problemen mit CPU Rating und in Konsequenz mit der Verfügbarkeit der Webservices führen.
 
-#### Attributes
-  * `username`: Optional login information
-  * `password`: Required login information
-  * `host`: Hostname or ip address of the FritzDevice.
-  * `port`: Port of the FritzDevice, typically 49433 for https or 49000 for http
-  * `cycle`: timeperiod between two update cycles. Default is 300 seconds.
-  * `ssl`: True or False => True will add "https", False "http" to the URLs in the plugin
-  * `verify`: True or False => Turns certificate verification on or off. Typically False
-  * `call_monitor`: True or False => Activates or deactivates the MonitoringService, which connects to the FritzDevice's call monitor
-  * `instance`: Unique identifier for each FritzDevice / each instance of the plugin
+## Konfiguration des Items
 
-### items.yaml
+Zur Konfiguration der Items stehen folgende Parameter zur Verfügung:
 
-#### avm_data_type
-This attribute defines supported functions that can be set for an item. Full set see example below.
-For most items, the avm_data_type can be bound to an instance via @... . Only in some points the items
-are parsed as child items. In the example below there is a comment in the respective spots.
+### avm_data_type
 
-### Example:
+This attribute defines supported functions that can be set for an item. Full set see plugin.yaml. For most items, the avm_data_type can be bound to an instance via @... . Only in some points the items are parsed as child items.
+
+### avm_incoming_allowed
+
+Definition der erlaubten eingehenden Rufnummer in Items vom avm_data_type monitor_trigger.'
+
+### avm_target_number
+
+Definition der erlaubten angerufenen Rufnummer in Items vom avm_data_type monitor_trigger.'
+
+### avm_wlan_index
+
+Definition des Wlans ueber index: (1: 2.4Ghz, 2: 5Ghz, 3: Gaeste).'
+
+### avm_mac
+
+Definition der MAC Adresse für Items vom avm_data_type network_device. Nur für diese Items mandatory!'
+
+### ain
+
+Definition der Aktor Identifikationsnummer (AIN)Items für smarthome Items. Nur für diese Items mandatory!'
+
+### avm_tam_index
+
+Index für den Anrufbeantworter, normalerweise für den ersten eine "1". Es werden bis zu 5 Anrufbeantworter vom Gerät unterstützt.'
+
+### avm_deflection_index
+
+Index für die Rufumleitung, normalerweise für die erste eine "1".'
+
+
+## item_structs
+
+Zur Vereinfachung der Einrichtung von Items sind für folgende Item-structs vordefiniert:
+- info - General Information about Fritzbox
+- monitor - Coll Monitor
+- tam - (für einen) Anrufbeantworter
+- deflection - (für eine) Rufumleitung
+- wan - WAN Items
+- wlan - Wireless Lan Items
+- device - Item eines verbundenen Gerätes
+- smarthome_general - Allgemeine Informationen eines DECT smarthome Devices
+- smarthome_hkr - spezifische Informationen eines DECT Thermostat Devices
+- smarthome_temperatur_sensor - spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
+- smarthome_alert - spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
+- smarthome_switch - spezifische Informationen eines DECT smarthome Devices mit Schalter
+- smarthome_powermeter - spezifische Informationen eines DECT smarthome Devices mit Strommessung
+
+### Item Beispiel mit Verwendung der structs
 
 ```yaml
 avm:
+    fritzbox:
+        info:
+            struct:
+              - avm.info
 
-    uptime_7490:
-        type: num
-        visu_acl: ro
-        avm_data_type@fritzbox_7490: uptime
-
-    uptime_1750:
-        type: num
-        visu_acl: ro
-        avm_data_type@wlan_repeater_1750: uptime
-
-    serial_number_7490:
-        type: str
-        visu_acl: ro
-        avm_data_type@fritzbox_7490: serial_number
-
-    serial_number_1750:
-        type: str
-        visu_acl: ro
-        avm_data_type@wlan_repeater_1750: serial_number
-
-    firmware_7490:
-        type: str
-        visu_acl: ro
-        avm_data_type@fritzbox_7490: software_version
-
-    firmware_1750:
-        type: str
-        visu_acl: ro
-        avm_data_type@wlan_repeater_1750: software_version
-
-    hardware_version_7490:
-        type: str
-        visu_acl: ro
-        avm_data_type@fritzbox_7490: hardware_version
-
-    hardware_version_1750:
-        type: str
-        visu_acl: ro
-        avm_data_type@wlan_repeater_1750: hardware_version
-
-    myfritz:
-        type: bool
-        avm_data_type@fritzbox_7490: myfritz_status
-
-    monitor:
-
-        trigger1:
-            type: bool
-            avm_data_type@fritzbox_7490: monitor_trigger
-            avm_incoming_allowed: xxxxxxxx
-            avm_target_number: xxxxxxxx
-            enforce_updates: 'yes'
-
-        trigger2:
-            type: bool
-            avm_data_type@fritzbox_7490: monitor_trigger
-            avm_incoming_allowed: xxxxxxxx
-            avm_target_number: xxxxxxxx
-            enforce_updates: 'yes'
-
-        trigger3:
-            type: bool
-            avm_data_type@fritzbox_7490: monitor_trigger
-            avm_incoming_allowed: xxxxxxxx
-            avm_target_number: xxxxxxxx
-            enforce_updates: 'yes'
-
-        trigger4:
-            type: bool
-            avm_data_type@fritzbox_7490: monitor_trigger
-            avm_incoming_allowed: xxxxxxxx
-            avm_target_number: xxxxxxxx
-            enforce_updates: 'yes'
-
-        incoming:
-
-            is_call_incoming:
-                type: bool
-                avm_data_type@fritzbox_7490: is_call_incoming
-
-            duration:
-                type: num
-                avm_data_type@fritzbox_7490: call_duration_incoming
-
-            last_caller:
-                type: str
-                avm_data_type@fritzbox_7490: last_caller_incoming
-
-            last_calling_number:
-                type: str
-                avm_data_type@fritzbox_7490: last_number_incoming
-
-            last_called_number:
-                type: str
-                avm_data_type@fritzbox_7490: last_called_number_incoming
-
-            last_call_date:
-                type: str
-                avm_data_type@fritzbox_7490: last_call_date_incoming
-
-            event:
-                type: str
-                avm_data_type@fritzbox_7490: call_event_incoming
-
-        outgoing:
-
-            is_call_outgoing:
-                type: bool
-                avm_data_type@fritzbox_7490: is_call_outgoing
-
-            duration:
-                type: num
-                avm_data_type@fritzbox_7490: call_duration_outgoing
-
-            last_caller:
-                type: str
-                avm_data_type@fritzbox_7490: last_caller_outgoing
-
-            last_calling_number:
-                type: str
-                avm_data_type@fritzbox_7490: last_number_outgoing
-
-            last_called_number:
-                type: str
-                avm_data_type@fritzbox_7490: last_called_number_outgoing
-
-            last_call_date:
-                type: str
-                avm_data_type@fritzbox_7490: last_call_date_outgoing
-
-            event:
-                type: str
-                avm_data_type@fritzbox_7490: call_event_outgoing
-
-        newest:
-
-            direction:
-                type: str
-                avm_data_type@fritzbox_7490: call_direction
-                cache: 'yes'
-
-            event:
-                type: str
-                avm_data_type@fritzbox_7490: call_event
-                cache: 'yes'
-
-    tam:
-        index@fritzbox_7490: 1
-        type: bool
-        visu_acl: rw
-        avm_data_type@fritzbox_7490: tam
-
-        name:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: tam_name
-
-        message_number_old:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: tam_old_message_number
-            eval: (sh.avm.tam.message_number_total()-sh.avm.tam.message_number_new())
-            eval_trigger:
-              - avm.tam.message_number_total
-              - avm.tam.message_number_new
-
-        message_number_new:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: tam_new_message_number
-
-        message_number_total:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: tam_total_message_number
-
-    wan:
-
-        connection_status:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_connection_status
-
-        connection_error:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_connection_error
-
-        is_connected:
-            type: bool
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_is_connected
-
-        uptime:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_uptime
-
-        ip:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_ip
-
-        upstream:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_upstream
-
-        downstream:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_downstream
-
-        total_packets_sent:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_total_packets_sent
-
-        total_packets_received:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_total_packets_received
-
-        current_packets_sent:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_current_packets_sent
-
-        current_packets_received:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_current_packets_received
-
-        total_bytes_sent:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_total_bytes_sent
-
-        total_bytes_received:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_total_bytes_received
-
-        current_bytes_sent:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_current_bytes_sent
-
-        current_bytes_received:
-            type: num
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_current_bytes_received
-
-        link:
-            type: bool
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wan_link
-
-    wlan:
-
-        gf_wlan_1:
+        reboot:
             type: bool
             visu_acl: rw
-            avm_data_type@fritzbox_7490: wlanconfig    # 2,4ghz
-            avm_wlan_index@fritzbox_7490: 1
+            enforce_updates: yes
 
-        gf_wlan_1_ssid:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wlanconfig_ssid    # 2,4ghz
-            avm_wlan_index@fritzbox_7490: 1
+        monitor:
+            struct:
+              - avm.monitor
 
-        gf_wlan_2:
-            type: bool
-            visu_acl: rw
-            avm_data_type@fritzbox_7490: wlanconfig    # 5 GHz
-            avm_wlan_index@fritzbox_7490: 2
+        tam:
+            struct:
+              - avm.tam
 
-        gf_wlan_3:
-            type: bool
-            visu_acl: rw
-            avm_data_type@fritzbox_7490: wlanconfig    # Guest
-            avm_wlan_index@fritzbox_7490: 3
+        rufumleitung:
+            rufumleitung_1:
+                struct:
+                  - avm.deflection
 
-        gf_wlan_3_ssid:
-            type: str
-            visu_acl: ro
-            avm_data_type@fritzbox_7490: wlanconfig_ssid    # 2,4ghz
-            avm_wlan_index@fritzbox_7490: 3
+            rufumleitung_2:
+                avm_deflection_index: 2
+                struct:
+                  - avm.deflection
 
-        gf_wlan_3_tr:
-            type: num
-            visu_acl: rw
-            avm_data_type@fritzbox_7490: wlan_guest_time_remaining    # Guest
-            avm_wlan_index@fritzbox_7490: 3
+        wan:
+            struct:
+              - avm.wan
 
-        uf_wlan_1:
-            type: bool
-            visu_acl: rw
-            avm_data_type@wlan_repeater_1750: wlanconfig    # 2,4ghz
-            avm_wlan_index@wlan_repeater_1750: 1
+        wlan:
+            struct:
+              - avm.wlan
 
-        uf_wlan_1_ssid:
-            type: str
-            visu_acl: ro
-            avm_data_type@wlan_repeater_1750: wlanconfig_ssid    # 2,4ghz
-            avm_wlan_index@wlan_repeater_1750: 1
+        connected_devices:
+            mobile_1:
+                avm_mac: xx:xx:xx:xx:xx:xx
+                struct:
+                  - avm.device
 
-        uf_wlan_2:
-            type: bool
-            visu_acl: rw
-            avm_data_type@wlan_repeater_1750: wlanconfig    # 5 GHz
-            avm_wlan_index@wlan_repeater_1750: 2
+            mobile_2:
+                avm_mac: xx:xx:xx:xx:xx:xx
+                struct:
+                  - avm.device
 
-        uf_wlan_3:
-            type: bool
-            visu_acl: rw
-            avm_data_type@wlan_repeater_1750: wlanconfig    # Guest
-            avm_wlan_index@wlan_repeater_1750: 3
-
-    devices:
-
-        wlan_repeater_1750:
-
-            GalaxyS5:
-                avm_mac@wlan_repeater_1750: xx:xx:xx:xx:xx:xx
-                avm_data_type@wlan_repeater_1750: network_device
-                type: bool
-                cache: 'yes'
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_hostname
-                    visu_acl: ro
-
-            iPhone:
-                avm_mac@wlan_repeater_1750: xx:xx:xx:xx:xx:xx
-                avm_data_type@wlan_repeater_1750: network_device
-                type: bool
-                cache: 'yes'
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@wlan_repeater_1750: device_hostname
-                    visu_acl: ro
-
-        fritzbox_7490:
-
-            iPad:
-                avm_mac@fritzbox_7490: xx:xx:xx:xx:xx:xx
-                avm_data_type@fritzbox_7490: network_device
-                type: bool
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_hostname
-                    visu_acl: ro
-
-            hauptrechner:
-                mac: xx:xx:xx:xx:xx:xx
-                avm_data_type@fritzbox_7490: network_device
-                type: bool
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_hostname
-                    visu_acl: ro
-
-            GalaxyS5:
-                mac: xx:xx:xx:xx:xx:xx
-                avm_data_type@fritzbox_7490: network_device
-                type: bool
-                cache: 'yes'
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_hostname
-                    visu_acl: ro
-
-            GalaxyTabS2:
-                mac: xx:xx:xx:xx:xx:xx
-                avm_data_type@fritzbox_7490: network_device
-                type: bool
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_hostname
-                    visu_acl: ro
-
-            iPhone:
-                mac: xx:xx:xx:xx:xx:xx
-                avm_data_type@fritzbox_7490: network_device
-                type: bool
-                cache: 'yes'
-                visu_acl: ro
-
-                # these items need to be child items from network_device
-                ip:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_ip
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                connection_type:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_connection_type
-                    visu_acl: ro
-
-                # these items need to be child items from network_device
-                hostname:
-                    type: str
-                    avm_data_type@fritzbox_7490: device_hostname
-                    visu_acl: ro
-
-    dect:
-
-        socket_living:
-            type: bool
-            avm_data_type@fritzbox_7490: aha_device
-            ain@fritzbox_7490: 14324 0432601    # has to be identical to id in fritzbox (also with spaces!)
-            visu_acl: rw
-
-            # these items need to be child items from aha_device
-            energy:
-                avm_data_type@fritzbox_7490: energy
-                type: num
-                visu_acl: ro
-
-            # these items need to be child items from aha_device
-            power:
-                avm_data_type@fritzbox_7490: power
-                type: num
-                sqlite: 'yes'
-                enforce_updates: 'true'
-                visu_acl: ro
-                eval: value / 100
-
-            # these items need to be child items from aha_device
-            temperature:
-                avm_data_type@fritzbox_7490: temperature
-                type: num
-                visu_acl: ro
-
-        socket_office:
-            type: bool
-            avm_data_type@fritzbox_7490: aha_device
-            ain@fritzbox_7490: 03456 0221393    # has to be identical to id in fritzbox (also with spaces!)
-            visu_acl: rw
-
-            # these items need to be child items from aha_device
-            energy:
-                avm_data_type@fritzbox_7490: energy
-                type: num
-                visu_acl: ro
-
-            # these items need to be child items from aha_device
-            power:
-                avm_data_type@fritzbox_7490: power
-                type: num
-                sqlite: 'yes'
-                enforce_updates: 'true'
-                visu_acl: ro
-                eval: value / 100
-
-            # these items need to be child items from aha_device
-            temperature:
-                avm_data_type@fritzbox_7490: temperature
-                type: num
-                visu_acl: ro
-
-    hkr_bathroom:
-            # Current hkr state: 0 = closed, 1: open, 2: temperature controlled, 3: error
-            type: num
-            value: 3
-            avm_data_type@fritzbox_7490: hkr_device
-            ain@fritzbox_7490: 09995 0191234 # has to be identical to id in fritzbox (also with spaces!)
-            visu_acl: ro
-
-            # these items need to be child items from hkr_device. They are read only items.
-            is_temperature:
-                value: -1
-                avm_data_type@fritzbox_7490: temperature
-                type: num
-                visu_acl: ro
-            
-            set_temperature_reduced:
-                value: -1
-                avm_data_type@fritzbox_7490: set_temperature_reduced
-                type: num
-                visu_acl: ro
-
-            set_temperature_comfort:
-                value: -1
-                avm_data_type@fritzbox_7490: set_temperature_comfort
-                type: num
-                visu_acl: ro
-
-            # these items are also mandatory and used to read and write the setpoint temperature
-            set_temperature:
-                value: -1
-                avm_data_type@fritzbox_7490: set_temperature
-                type: num
-                visu_acl: rw
-
-            set_hkrwindowopen:
-                value: False
-                avm_data_type@fritzbox_7490: set_hkrwindowopen
-                type: bool
-                visu_acl: rw
-                enforce_updates: true
-
+    smarthome:
+        hkr_og_bad:
+            type: foo
+            ain: 'xxxxx xxxxxxx'
+            struct:
+              - avm.smarthome_general
+              - avm.smarthome_hkr
+              - avm.smarthome_temperatur_sensor
 ```
 
-## Functions
 
-### get_phone_name
-Get the phone name at a specific index. The returend value can be used as phone_name for set_call_origin. Parameter is an INT, starting from 1. In case an index does not exist, an error is logged.
-The used function X_AVM-DE_GetPhonePort() does not deliver analog connections like FON 1 and FON 2 (BUG in AVM Software).
+## Plugin Funktionen
 
-```python
-phone_name = sh.fb1.get_phone_name(1)
-```
+### cancel_call
 
-CURL for this function:
+Beendet einen aktiven Anruf.
 
-```bash
-curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/x_voip" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:X_VoIP:1#X_AVM-DE_GetPhonePort" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:X_AVM-DE_GetPhonePort xmlns:u='urn:dslforum-org:service:X_VoIP:1'><s:NewIndex>1</s:NewIndex></u:X_AVM-DE_GetPhonePort></s:Body></s:Envelope>" -s -k
-```
+### get_call_origin
 
-###get_call_origin
-
-Gets the phone name, currently set as call_origin.
+Gib den Namen des Telefons zurück, das aktuell als 'call origin' gesetzt ist.
 
 ```python
 phone_name = sh.fritzbox_7490.get_call_origin()
@@ -712,40 +207,32 @@ CURL for this function:
 curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/x_voip" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:X_VoIP:1#X_AVM-DE_DialGetConfig" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:X_AVM-DE_DialGetConfig xmlns:u='urn:dslforum-org:service:X_VoIP:1' /></s:Body></s:Envelope>" -s -k
 ```
 
-### set_call_origin(phone_name)
+### get_calllist
 
-Sets the origin of a call. E.g. a DECT phone. Typically set before using "start_call".
-You can also set the origin on your FritzDevice via "Telefonie -> Anrufe -> Wählhilfe verwenden -> Verbindung mit dem Telefon".
-The used function X_AVM-DE_SetDialConfig() does not allow the configuration of analog connections (BUG in AVM Software).
+Ermittelt ein Array mit dicts aller Einträge der Anrufliste (Attribute 'Id', 'Type', 'Caller', 'Called', 'CalledNumber', 'Name', 'Numbertype', 'Device', 'Port', 'Date',' Duration' (einige optional)).
 
-```python
-sh.fb1.set_call_origin("<phone_name>")
-```
+### get_contact_name_by_phone_number(phone_number)
 
-### start_call(phone_number)
-This function starts a call. Parameter can be an external or internal number.
+Durchsucht das Telefonbuch mit einer (vollständigen) Telefonnummer nach Kontakten. Falls kein Name gefunden wird, wird die Telefonnummer zurückgeliefert.
 
-```python
-sh.fb1.start_call('0891234567')
-sh.fb1.start_call('**9')
-```
+### get_device_log_from_lua
 
-### cancel_call()
-This function cancels a running call.
+Ermittelt die Logeinträge auf dem Gerät über die LUA Schnittstelle /query.lua?mq_log=logger:status/log.
 
-### wol(mac_address)
-This function executes a wake on lan command to the specified MAC address
+### get_device_log_from_tr064
 
-### reconnect()
-This function reconnects the WAN (=internet) connection.
+Ermittelt die Logeinträge auf dem Gerät über die TR-064 Schnittstelle.
 
-### reboot()
-This function reboots the FritzDevice.
+### get_host_details
 
-### get_hosts(only_active)
-Gets the data of get_host_details for all hosts as array. If only_active is True, only active hosts are returned.
+Ermittelt die Informationen zu einem Host an einem angegebenen Index als dict.
+dict keys: name, interface_type, ip_address, mac_address, is_active, lease_time_remaining
 
-Example of a logic which is merging hosts of three devices into one list and rendering them to an HTML list, which is written to the item
+### get_hosts
+
+Ermittelt ein Array mit den Details aller verbundenen Hosts. Verwendet wird die Funktion "get_host_details"
+
+Beispiel einer Logik, die die Host von 3 verbundenen Geräten in eine Liste zusammenführt und in ein Item schreibt.
 'avm.devices.device_list'
 
 ```python
@@ -777,26 +264,22 @@ string += '</ul>'
 sh.avm.devices.device_list(string)
 ```
 
-### get_host_details(index)
-Gets the data of a host as dict:
-dict keys: name, interface_type, ip_address, mac_address, is_active, lease_time_remaining
+### get_phone_name
 
-### is_host_active(mac_address)
-This function checks, if a device running on a given mac address is active on the FritzDevice. Can be used for presence detection.
+Gibt den Namen eines Telefons an einem Index zurück. Der zurückgegebene Wert kann in 'set_call_origin' verwendet werden. Parameter ist INT und beginnt bei 1. Falls der Index nicht mit angegeben ist, wird ein Fehler geloggt.
+
+```python
+phone_name = sh.fb1.get_phone_name(1)
+```
 
 CURL for this function:
 ```bash
-curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/hosts" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:Hosts:1#GetSpecificHostEntry" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:GetSpecificHostEntry xmlns:u='urn:dslforum-org:service:Hosts:1'><s:NewMACAddress>XX:XX:XX:XX:XX:XX</s:NewMACAddress></u:GetSpecificHostEntry></s:Body></s:Envelope>" -s -k
+curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/x_voip" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:X_VoIP:1#X_AVM-DE_GetPhonePort" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:X_AVM-DE_GetPhonePort xmlns:u='urn:dslforum-org:service:X_VoIP:1'><s:NewIndex>1</s:NewIndex></u:X_AVM-DE_GetPhonePort></s:Body></s:Envelope>" -s -k
 ```
-
-### get_contact_name_by_phone_number(phone_number)
-This is a function to search for telephone numbers in the contacts stored on the devices phone book
 
 ### get_phone_numbers_by_name(name)
 
-This is a function to search for contact names and retrieve the related telephone numbers
-
-Set an item with a html of all found numbers e.g. by:
+Durchsucht das Telefonbuch mit einem Namen nach nach Kontakten und liefert die zugehörigen Telefonnummern.
 
 ```python
 result_numbers = sh.fritzbox_7490.get_phone_numbers_by_name('Mustermann')
@@ -815,5 +298,76 @@ for contact in result_numbers:
 sh.general_items.number_search_results(result_string)
 ```
 
-### get_calllist()
-Returns an array with calllist entries
+### is_host_active
+
+Prüft, ob eine MAC Adresse auf dem Gerät aktiv ist. Das kann bspw. für die Umsetzung einer Präsenzerkennung genutzt werden.
+
+CURL for this function:
+```bash
+curl --anyauth -u user:password "https://fritz.box:49443/upnp/control/hosts" -H "Content-Type: text/xml; charset="utf-8"" -H "SoapAction:urn:dslforum-org:service:Hosts:1#GetSpecificHostEntry" -d "<?xml version='1.0' encoding='utf-8'?><s:Envelope s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/' xmlns:s='http://schemas.xmlsoap.org/soap/envelope/'><s:Body><u:GetSpecificHostEntry xmlns:u='urn:dslforum-org:service:Hosts:1'><s:NewMACAddress>XX:XX:XX:XX:XX:XX</s:NewMACAddress></u:GetSpecificHostEntry></s:Body></s:Envelope>" -s -k
+```
+
+### reboot
+
+Startet das Gerät neu.
+
+### reconnect
+
+Verbindet das Gerät neu mit dem WAN (Wide Area Network).
+
+### set_call_origin
+
+Setzt den 'call origin', bspw. vor dem Aufruf von 'start_call'. Typischerweise genutzt vor der Verwendung von "start_call".
+Der Origin kann auch mit direkt am Fritzdevice eingerichtet werden: "Telefonie -> Anrufe -> Wählhilfe verwenden -> Verbindung mit dem Telefon".
+
+```python
+sh.fb1.set_call_origin("<phone_name>")
+```
+
+### start_call
+
+Startet einen Anruf an eine übergebene Telefonnummer (intern oder extern).
+```python
+sh.fb1.start_call('0891234567')
+sh.fb1.start_call('**9')
+```
+
+### wol(mac_address)
+
+Sendet einen WOL (WakeOnLAN) Befehl an eine MAC Adresse.
+
+### get_number_of_deflections
+
+Liefert die Anzahl der Rufumleitungen zurück.
+
+### get_deflection
+
+Liefert die Details der Rufumleitung der angegebenen ID zurück (Default-ID = 0)
+
+### get_deflections
+
+Liefert die Details aller Rufumleitungen zurück.
+
+### set_deflection_enable
+
+Schaltet die Rufumleitung mit angegebener ID an oder aus.
+
+
+## Web Interface
+
+Das avm Plugin verfügt über ein Webinterface, mit dessen Hilfe die Items die das Plugin nutzen übersichtlich dargestellt werden.
+
+**Important**
+> Das Webinterface des Plugins kann mit SmartHomeNG v1.4.2 und davor nicht genutzt werden. Es wird dann nicht geladen. Diese Einschränkung gilt nur für das Webinterface. Ansonsten gilt für das Plugin die in den Metadaten angegebene minimale SmartHomeNG Version.
+
+## Aufruf des Webinterfaces
+
+Das Plugin kann aus dem backend aufgerufen werden. Dazu auf der Seite Plugins in der entsprechenden Zeile das Icon in der Spalte Web Interface anklicken.
+
+Im WebIF stehen folgende Reiter zur Verfügung:
+- AVM Items - Tabellarische Auflistung aller Items, die mit dem TR-064 Protokoll ausgelesen werden
+- AVM Smarthome Items - Tabellarische Auflistung aller Items, die mit dem AHA Protokoll ausgelesen werden (Items der Smarthome Geräte)
+- Plugin-API - Beschreibung der Plugin-API
+- Log-Einträge - Listung der Logeinträge der Fritzbox
+- Call Monitor Items - Tabellarische Auflistung des Anrufmonitors (nur wenn dieser konfiguriert ist)
+- AVM Smarthome Devices - Auflistung der mit der Fritzbox verbundenen Geräte
