@@ -20,6 +20,17 @@ Allgemeine Informationen
 
 Im Plugin wird das TR-064 Protokoll und das AHA Protokoll verwendet.
 
+Links zur Definition des TR-064 Protokolls:
+https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/X_contactSCPD.pdf
+http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/hostsSCPD.pdf
+http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/wanipconnSCPD.pdf
+http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_voipSCPD.pdf
+
+
+Links zur Definition des AHA Protokolls:
+https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AHA-HTTP-Interface.pdf
+
+
 Unterstützung erhält man im Forum unter: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
 

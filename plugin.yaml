@@ -183,6 +183,7 @@ item_attributes:
         - 'power'
         - 'energy'
         - 'voltage'
+        - 'rel_humidity'
         # - 'alert_state'
         # Deflections
         - 'number_of_deflections'       # r/o Anzahl der eingestellten Rufumleitungen
