@@ -1,5 +1,3 @@
-.. index:: Plugins; AVM (Unterstützung für Fritz!Box usw.)
-.. index:: AVM
 
 AVM
 ###
@@ -10,8 +8,8 @@ Changelog
 1.6.0
 -----
 
-- Anbindung der Smarthome Devices über AHA-Interface hinzugefügt
-- Funktionen für Rufumleitungen hinzugefügt
+- Anbindung der Smarthome Devices über AHA-Interface hinzugefügt (getestet mit Fritz 440, Comet Dect)
+- Funktionen für Rufumleitungen hinzugefügt (getestet mit Fritzbox 7530)
 - Plugin Parameter "index" in "avm_tam_index" umbenannt
 - Code Cleanup
 
@@ -49,15 +47,15 @@ Konfiguration des Plugins
 Die Konfigruation des Plugins erfolgt über das Admin-Inteface.
 Dafür stehen die folgenden Einstellungen zur Verfügung:
 
-  - `username`: Required login information
-  - `password`: Required login information
-  - `host`: Hostname or ip address of the FritzDevice.
-  - `port`: Port of the FritzDevice, typically 49433 for https or 49000 for http
-  - `cycle`: timeperiod between two update cycles. Default is 300 seconds.
-  - `ssl`: True or False => True will add "https", False "http" to the URLs in the plugin
-  - `verify`: True or False => Turns certificate verification on or off. Typically False
-  - `call_monitor`: True or False => Activates or deactivates the MonitoringService, which connects to the FritzDevice's call monitor
-  - `instance`: Unique identifier for each FritzDevice / each instance of the plugin
+- `username`: Required login information
+- `password`: Required login information
+- `host`: Hostname or ip address of the FritzDevice.
+- `port`: Port of the FritzDevice, typically 49433 for https or 49000 for http
+- `cycle`: timeperiod between two update cycles. Default is 300 seconds.
+- `ssl`: True or False => True will add "https", False "http" to the URLs in the plugin
+- `verify`: True or False => Turns certificate verification on or off. Typically False
+- `call_monitor`: True or False => Activates or deactivates the MonitoringService, which connects to the FritzDevice's call monitor
+- `instance`: Unique identifier for each FritzDevice / each instance of the plugin
 
 Alternativ kann das Plugin auch manuell konfiguriert werden.
 
@@ -90,8 +88,7 @@ Alternativ kann das Plugin auch manuell konfiguriert werden.
         call_monitor: 'True'
         instance: wlan_repeater_1750
 
-Note: Depending on the FritzDevice a shorter cycle time can result in problems with CPU rating and, in consequence with the accessibility of the webservices on the device.
-If cycle time is reduced, please carefully watch your device and your sh.log. In the development process, 120 Seconds also worked worked fine on the used devices.
+.. note:: Kürzere Updatezyklen können abhängig vm Fritzdevice aufgrund von CPU Auslastung und damit zu Problemen (u.a. zu Nichterreichbarkeit des Webservice) führen. Wird ein kürzerer Updatezyklus benötigt, sollte das shNG Log beobachtet werden. Dort werden entsprechende Fehlermeldungen hinterlegt.
 
 Konfiguration des Items
 =======================
@@ -124,11 +121,9 @@ ain
 ---
 Definition der Aktor Identifikationsnummer (AIN)Items für smarthome Items. Nur für diese Items mandatory!'
 
-
 avm_tam_index
 -------------
 Index für den Anrufbeantworter, normalerweise für den ersten eine "1". Es werden bis zu 5 Anrufbeantworter vom Gerät unterstützt.'
-
 
 avm_deflection_index
 --------------------
@@ -138,19 +133,20 @@ Index für die Rufumleitung, normalerweise für die erste eine "1".'
 item_structs
 ============
 Zur Vereinfachung der Einrichtung von Items sind für folgende Item-structs vordefiniert:
-  - `info`  -  General Information about Fritzbox
-  - `monitor`  -  Coll Monitor
-  - `tam`  -  (für einen) Anrufbeantworter
-  - `deflection`  -  (für eine) Rufumleitung
-  - `wan`  -  WAN Items
-  - `wlan`  -  Wireless Lan Items
-  - `device`  -  Item eines verbundenen Gerätes
-  - `smarthome_general`  -  Allgemeine Informationen eines DECT smarthome Devices
-  - `smarthome_hkr`  -  spezifische Informationen eines DECT Thermostat Devices
-  - `smarthome_temperatur_sensor`  -  spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
-  - `smarthome_alert`  -  spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
-  - `smarthome_switch`  -  spezifische Informationen eines DECT smarthome Devices mit Schalter
-  - `smarthome_powermeter`  -  spezifische Informationen eines DECT smarthome Devices mit Strommessung
+
+- ``info``  -  General Information about Fritzbox
+- ``monitor``  -  Coll Monitor
+- ``tam``  -  (für einen) Anrufbeantworter
+- ``deflection``  -  (für eine) Rufumleitung
+- ``wan``  -  WAN Items
+- ``wlan``  -  Wireless Lan Items
+- ``device``  -  Item eines verbundenen Gerätes
+- ``smarthome_general``  -  Allgemeine Informationen eines DECT smarthome Devices
+- ``smarthome_hkr``  -  spezifische Informationen eines DECT Thermostat Devices
+- ``smarthome_temperatur_sensor``  -  spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
+- ``smarthome_alert``  -  spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
+- ``smarthome_switch``  -  spezifische Informationen eines DECT smarthome Devices mit Schalter
+- ``smarthome_powermeter``  -  spezifische Informationen eines DECT smarthome Devices mit Strommessung
 
 Item Beispiel mit Verwendung der structs
 ----------------------------------------
@@ -162,49 +158,39 @@ Item Beispiel mit Verwendung der structs
             info:
                 struct:
                   - avm.info
-
             reboot:
                 type: bool
                 visu_acl: rw
                 enforce_updates: yes
-
             monitor:
                 struct:
                   - avm.monitor
-
             tam:
                 struct:
                   - avm.tam
-
             rufumleitung:
                 rufumleitung_1:
                     struct:
                       - avm.deflection
-
                 rufumleitung_2:
                     avm_deflection_index: 2
                     struct:
                       - avm.deflection
-
             wan:
                 struct:
                   - avm.wan
-
             wlan:
                 struct:
                   - avm.wlan
-
             connected_devices:
                 mobile_1:
                     avm_mac: xx:xx:xx:xx:xx:xx
                     struct:
                       - avm.device
-
                 mobile_2:
                     avm_mac: xx:xx:xx:xx:xx:xx
                     struct:
                       - avm.device
-
         smarthome:
             hkr_og_bad:
                 type: foo
@@ -213,7 +199,6 @@ Item Beispiel mit Verwendung der structs
                   - avm.smarthome_general
                   - avm.smarthome_hkr
                   - avm.smarthome_temperatur_sensor
-
 
 Plugin Funktionen
 =================
@@ -400,7 +385,7 @@ Das avm Plugin verfügt über ein Webinterface, mit dessen Hilfe die Items die d
 Aufruf des Webinterfaces
 ------------------------
 
-Das Plugin kann aus dem backend aufgerufen werden. Dazu auf der Seite Plugins in der entsprechenden
+Das Plugin kann aus dem Admin-IF aufgerufen werden. Dazu auf der Seite Plugins in der entsprechenden
 Zeile das Icon in der Spalte **Web Interface** anklicken.
 
 Im WebIF stehen folgende Reiter zur Verfügung:

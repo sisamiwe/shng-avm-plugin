@@ -1011,8 +1011,8 @@ class AVM(SmartPlugin):
         https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AHA-HTTP-Interface.pdf
         https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AVM_Technical_Note_-_Session_ID.pdf
 
-        :param action: string of the action
-        :param param: optional parameter
+        :param aha_action: string of the action
+        :param aha_param: optional parameter
         :param sid: session ID
         :return: string of aha data
         """
@@ -2051,23 +2051,27 @@ class AVM(SmartPlugin):
         url = "%s://%s%s" % (self._get_url_prefix(), self._fritz_device.get_host(), "/webservices/homeautoswitch.lua")
         # self.logger.debug(f"built request url: {url}")
 
-        mySID = self._request_session_id()
-        params = {"switchcmd": cmd, "sid": mySID}
-        if param:
-            params.update(param)
-        if ain:
-            params["ain"] = ain
+        try:
+            mySID = self._request_session_id()
 
-        plain = self._request(url, params)
-        self.logger.debug(f"Plain AHA request response is: {plain}")
+            params = {"switchcmd": cmd, "sid": mySID}
+            if param:
+                params.update(param)
+            if ain:
+                params["ain"] = ain
 
-        if plain == "inval":
-            self.logger.error(f"Respone of AHA request {cmd} was invalid")
-            return None
-        else:
-            if rf == bool:
-                return bool(int(plain))
-            return rf(plain)
+            plain = self._request(url, params)
+            self.logger.debug(f"Plain AHA request response is: {plain}")
+
+            if plain == "inval":
+                self.logger.error(f"Respone of AHA request {cmd} was invalid")
+                return None
+            else:
+                if rf == bool:
+                    return bool(int(plain))
+                return rf(plain)
+        except:
+            pass
 
     # def _get_aha_device_elements(self):
         # """Get the DOM elements for the device list."""
