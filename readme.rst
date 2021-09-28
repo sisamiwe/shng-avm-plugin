@@ -1,6 +1,3 @@
-.. index:: Plugins; AVM (Unterstützung für Fritz!Box usw.)
-.. index:: AVM
-
 AVM
 ###
 
