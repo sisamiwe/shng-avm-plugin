@@ -2373,7 +2373,7 @@ class AVM(SmartPlugin):
                     for child in button_element:
                         try:    
                             self._fritz_device._smarthome_devices[ain]['lastpressedtimestamp'] = int(child.getElementsByTagName('lastpressedtimestamp')[0].firstChild.data)
-                        except ValueError:
+                        except AttributeError:
                             pass
                         
             # information of AVM smarthome device having alarm
