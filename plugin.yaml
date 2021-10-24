@@ -5,14 +5,14 @@ plugin:
     description:
         de: 'Ansteuerung von AVM FRITZ!Boxen, WLAN-Repeatern, DECT Steckdosen, etc.'
         en: 'Get and send data from/to AVM devices such as the FRITZ!Box, Wifi Repeaters or DECT sockets.'
-    maintainer: psilo909
+    maintainer: psilo909, sisamiwe
     tester: Sandman60, cmalo
 #    keywords: iot xyz
     state: 'qa-passed'
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
     support: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-    version: 1.5.13                # Plugin version
+    version: 1.6.0                 # Plugin version
     sh_minversion: 1.6             # minimum shNG version to use this plugin
 #    sh_maxversion:                # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: True           # plugin supports multi instance
@@ -195,8 +195,8 @@ item_attributes:
         - 'deflection_to_number'        # r/o Zielrufnummer der Umleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_mode'             # r/o Modus der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_outgoing'         # r/o Outgoing der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
-        - 'deflection_phonebook_id'     # r/o Phonebook_ID der Zielrufnummer (Only valid if Type==fromPB); Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item    
-        
+        - 'deflection_phonebook_id'     # r/o Phonebook_ID der Zielrufnummer (Only valid if Type==fromPB); Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
+
     avm_incoming_allowed:
         type: str
         mandatory: False
@@ -357,13 +357,13 @@ item_structs:
             type: num
             visu_acl: ro
             avm_data_type@instance: tam_total_message_number
-            
+
     deflection:
         type: bool
         visu_acl: rw
         avm_data_type@instance: deflection_enable
         avm_deflection_index@instance: 1
-        
+
         deflection_type:
             type: str
             visu_acl: ro
@@ -493,111 +493,111 @@ item_structs:
 
     smarthome_general:
         name:
-            avm_data_type: device_name
+            avm_data_type@instance: device_name
             type: str
         identifier:
-            avm_data_type: device_id
+            avm_data_type@instance: device_id
             type: str
         productname:
-            avm_data_type: product_name
+            avm_data_type@instance: product_name
             type: str
         manufacturer:
-            avm_data_type: manufacturer
+            avm_data_type@instance: manufacturer
             type: str
         firmware_version:
-            avm_data_type: fw_version
+            avm_data_type@instance: fw_version
             type: str
         present:
-            avm_data_type: connected
+            avm_data_type@instance: connected
             type: bool
 
     smarthome_hkr:
         current_temperature:
-            avm_data_type: current_temperature
+            avm_data_type@instance: current_temperature
             type: num
         target_temperature:
-            avm_data_type: target_temperature
+            avm_data_type@instance: target_temperature
             type: num
         set_target_temperature:
-            avm_data_type: set_target_temperature
+            avm_data_type@instance: set_target_temperature
             type: num
         comfort_temperature:
-            avm_data_type: temperature_comfort
+            avm_data_type@instance: temperature_comfort
             type: num
         eco_temperature:
-            avm_data_type: temperature_reduced
+            avm_data_type@instance: temperature_reduced
             type: num
         battery_low:
-            avm_data_type: battery_low
+            avm_data_type@instance: battery_low
             type: bool
         battery_level:
-            avm_data_type: battery_level
+            avm_data_type@instance: battery_level
             type: num
         window_open:
-            avm_data_type: window_open
+            avm_data_type@instance: window_open
             type: bool
         summer_active:
-            avm_data_type: summer_active
+            avm_data_type@instance: summer_active
             type: bool
         holiday_active:
-            avm_data_type: holiday_active
+            avm_data_type@instance: holiday_active
             type: bool
         errorcode:
-            avm_data_type: errorcode
+            avm_data_type@instance: errorcode
             type: num
         set_hkrwindowopen:
-            avm_data_type: set_hkrwindowopen
+            avm_data_type@instance: set_hkrwindowopen
             type: bool
         windowopenactiveendtime:
-            avm_data_type: windowopenactiveendtime
+            avm_data_type@instance: windowopenactiveendtime
             type: num
         set_hkrboost:
-            avm_data_type: set_hkrboost
+            avm_data_type@instance: set_hkrboost
             type: bool
         boost_active:
-            avm_data_type: boost_active
+            avm_data_type@instance: boost_active
             type: bool
         boostactiveendtime:
-            avm_data_type: boostactiveendtime
+            avm_data_type@instance: boostactiveendtime
             type: num
         lock:
-            avm_data_type: lock
+            avm_data_type@instance: lock
             type: bool
         device_lock:
-            avm_data_type: device_lock
+            avm_data_type@instance: device_lock
             type: bool
 
     smarthome_temperatur_sensor:
         temperatur:
-            avm_data_type: current_temperature
+            avm_data_type@instance: current_temperature
             type: num
         temperature_offset:
-            avm_data_type: temperature_offset
+            avm_data_type@instance: temperature_offset
             type: num
 
     smarthome_alert:
         state:
-            avm_data_type: alert
+            avm_data_type@instance: alert
             type: bool
 
     smarthome_switch:
         switch_state:
-            avm_data_type: switch_state
+            avm_data_type@instance: switch_state
             type: bool
         switch_toggle:
-            avm_data_type: switch_toggle
+            avm_data_type@instance: switch_toggle
             type: bool
             enforce_updates: yes
 
     smarthome_powermeter:
         power:
-            avm_data_type: power
+            avm_data_type@instance: power
             type: num
         energy:
-            avm_data_type: energy
+            avm_data_type@instance: energy
             type: num
         voltage:
-            avm_data_type: voltage
+            avm_data_type@instance: voltage
             type: num
 
 
