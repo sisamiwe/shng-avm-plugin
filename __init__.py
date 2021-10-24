@@ -906,7 +906,7 @@ class AVM(SmartPlugin):
                                                                   'temperature_offset', 'set_hkrwindowopen', 'windowopenactiveendtime',
                                                                   'set_hkrboost', 'boost_active', 'boostactiveendtime', 'battery_low', 'battery_level',
                                                                   'lock', 'device_lock', 'window_open', 'summer_active', 'holiday_active', 'errorcode',
-                                                                  'switch_state', 'switch_mode', 'switch_toggle', 'power', 'energy', 'voltage']:
+                                                                  'switch_state', 'switch_mode', 'switch_toggle', 'power', 'energy', 'voltage', 'rel_humidity']:
             if self._get_item_ain(item) is not None:
                 self.logger.debug(f"Item {item.id()} with avm smarthome attribut and defined AIN found; append to list")
                 self._fritz_device._smarthome_items.append(item)
