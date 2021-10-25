@@ -183,7 +183,7 @@ item_attributes:
         - 'power'
         - 'energy'
         - 'voltage'
-        - 'humidity'
+        - 'humidity'                    # r/o Relative Luftfeuchtigkeit (FD440)
         # - 'alert_state'
         # Deflections
         - 'number_of_deflections'       # r/o Anzahl der eingestellten Rufumleitungen
