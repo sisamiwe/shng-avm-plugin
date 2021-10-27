@@ -2199,11 +2199,11 @@ class AVM(SmartPlugin):
                             except ValueError:
                                 pass
 
-                    humidity_element = element.getElementsByTagName('avmbutton')
+                    humidity_element = element.getElementsByTagName('humidity')
                     if len(humidity_element) > 0:
                         for child in humidity_element:
                             try:
-                                self._fritz_device._smarthome_devices[ain]['humidity'] = int(child.getElementsByTagName('humidity')[0].firstChild.data)
+                                self._fritz_device._smarthome_devices[ain]['humidity'] = int(child.getElementsByTagName('rel_humidity')[0].firstChild.data)
                             except ValueError:
                                 pass
 
