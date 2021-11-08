@@ -30,17 +30,20 @@ import threading
 import requests
 from time import mktime
 from xml.dom import minidom
-# from xml.etree import ElementTree
 from requests.packages import urllib3
 from requests.auth import HTTPDigestAuth
-from lib.model.smartplugin import *
-from lib.module import Modules
 from json.decoder import JSONDecodeError
 from datetime import datetime
-import cherrypy
+
+from lib.module import Modules
+from lib.model.smartplugin import *
+from lib.item import Items
+from lib.utils import Utils
 
 # for session id generation:
 import hashlib
+
+from .webif import WebInterface
 
 
 class MonitoringService:
@@ -86,14 +89,12 @@ class MonitoringService:
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.conn.connect((self._host, self._port))
-            _name = 'plugins.' + self._plugin_instance.get_fullname() + '.Monitoring_Service'
+            _name = f'plugins.{self._plugin_instance.get_fullname()}.Monitoring_Service'
             self._listen_thread = threading.Thread(target=self._listen, name=_name).start()
             self._plugin_instance.logger.debug("MonitoringService: connection established")
         except Exception as e:
             self.conn = None
-            self._plugin_instance.logger.error(
-                "MonitoringService: Cannot connect to " + self._host + " on port: " + str(
-                    self._port) + ", CallMonitor activated by #96*5*? - Error: " + str(e))
+            self._plugin_instance.logger.error(f"MonitoringService: Cannot connect to {self._host} on port: {self._port}, CallMonitor activated by #96*5*? - Error: {e}")
             return
 
     def disconnect(self):
@@ -180,7 +181,8 @@ class MonitoringService:
             if data == "":
                 self._plugin_instance.logger.error("CallMonitor connection not open anymore.")
             else:
-                self._plugin_instance.logger.debug(f"Data Received from CallMonitor: {data.decode('utf-8')}")
+                if self._plugin_instance.logger.isEnabledFor(logging.DEBUG):
+                    self._plugin_instance.logger.debug(f"Data Received from CallMonitor: {data.decode('utf-8')}")
             buffer += data.decode("utf-8")
             while buffer.find("\n") != -1:
                 line, buffer = buffer.split("\n", 1)
@@ -206,7 +208,8 @@ class MonitoringService:
 
         if self._call_active[direction]:
             self._call_active[direction] = False
-            self._plugin_instance.logger.debug('STOPPING ' + direction)
+            if self._plugin_instance.logger.isEnabledFor(logging.DEBUG):
+                self._plugin_instance.logger.debug(f'STOPPING {direction}')
             try:
                 if direction == 'incoming':
                     self._duration_counter_thread_incoming.join(1)
@@ -243,7 +246,8 @@ class MonitoringService:
 
         :param line: data line which is parsed
         """
-        self._plugin_instance.logger.debug(line)
+        if self._plugin_instance.logger.isEnabledFor(logging.DEBUG):
+            self._plugin_instance.logger.debug(line)
         line = line.split(";")
 
         try:
@@ -260,15 +264,20 @@ class MonitoringService:
             elif line[1] == "DISCONNECT":
                 self._trigger('', '', '', line[2], line[1], '')
         except Exception as e:
-            self._plugin_instance.logger.error(
-                "MonitoringService: " + type(e).__name__ + " while handling Callmonitor response: " + str(e))
+            self._plugin_instance.logger.error(f"MonitoringService: {type(e).__name__} while handling Callmonitor response: {e}")
             return
 
     def _trigger(self, call_from, call_to, time, callid, event, branch):
         """
         Triggers the event: sets item values and looks up numbers in the phone book.
         """
-        self._plugin_instance.logger.debug(f"Event: {event}, Call From: {call_from}, Call To: {call_to}, Time: {time}, CallID:{callid}")
+        if self._plugin_instance.logger.isEnabledFor(logging.DEBUG):
+            debug_logger = True
+        else:
+            debug_logger = False
+
+        if debug_logger is True:
+            self._plugin_instance.logger.debug(f"Event: {event}, Call From: {call_from}, Call To: {call_to}, Time: {time}, CallID:{callid}")
         # in each case set current call event and direction
         for item in self._items:
             if self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') == 'call_event':
@@ -285,15 +294,11 @@ class MonitoringService:
             for trigger_item in self._trigger_items:
                 if self._plugin_instance.get_iattr_value(trigger_item.conf, 'avm_data_type') == 'monitor_trigger':
                     trigger_item(0, self._plugin_instance.get_shortname())
-                    self._plugin_instance.logger.debug(
-                        self._plugin_instance.get_iattr_value(trigger_item.conf, 'avm_data_type') + " " +
-                        trigger_item.conf['avm_incoming_allowed'] + " " + trigger_item.conf[
-                            'avm_target_number'])
+                    if debug_logger is True:
+                        self._plugin_instance.logger.debug(f"{self._plugin_instance.get_iattr_value(trigger_item.conf, 'avm_data_type')} {trigger_item.conf['avm_incoming_allowed']} {trigger_item.conf['avm_target_number']}")
                     if 'avm_incoming_allowed' not in trigger_item.conf or 'avm_target_number' not in trigger_item.conf:
-                        self._plugin_instance.logger.error(
-                            "both 'avm_incoming_allowed' and 'avm_target_number' must be specified as attributes in a trigger item.")
-                    elif trigger_item.conf['avm_incoming_allowed'] == call_from and trigger_item.conf[
-                        'avm_target_number'] == call_to:
+                        self._plugin_instance.logger.error("both 'avm_incoming_allowed' and 'avm_target_number' must be specified as attributes in a trigger item.")
+                    elif trigger_item.conf['avm_incoming_allowed'] == call_from and trigger_item.conf['avm_target_number'] == call_to:
                         trigger_item(1, self._plugin_instance.get_shortname())
 
             if self._call_monitor_incoming_filter in call_to:
@@ -307,7 +312,8 @@ class MonitoringService:
                 # process items specific to incoming calls
                 for item in self._items_incoming:  # update items for incoming calls
                     if self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['is_call_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting is_call_incoming: {True}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting is_call_incoming: {True}")
                         item(True, self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_caller_incoming']:
                         if call_from != '' and call_from is not None:
@@ -319,16 +325,20 @@ class MonitoringService:
                         else:
                             item("Unbekannt", self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_call_date_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting last_call_date_incoming: {time}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting last_call_date_incoming: {time}")
                         item(time, self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['call_event_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
                         item(event.lower(), self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_number_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting last_number_incoming: {call_from}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting last_number_incoming: {call_from}")
                         item(call_from, self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_called_number_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting last_called_number_incoming: {call_to}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting last_called_number_incoming: {call_to}")
                         item(call_to, self._plugin_instance.get_shortname())
 
         # call is outgoing
@@ -376,11 +386,13 @@ class MonitoringService:
                 if not self._duration_item[
                            'call_duration_incoming'] is None:  # start counter thread only if duration item set and call is incoming
                     self._stop_counter('incoming')  # stop potential running counter for parallel (older) incoming call
-                    self._plugin_instance.logger.debug("Starting Counter for Call Time")
+                    if debug_logger is True:
+                        self._plugin_instance.logger.debug("Starting Counter for Call Time")
                     self._start_counter(time, 'incoming')
                 for item in self._items_incoming:
                     if self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['call_event_incoming']:
-                        self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
                         item(event.lower(), self._plugin_instance.get_shortname())
 
         # connection ended
@@ -400,13 +412,16 @@ class MonitoringService:
             elif callid == self._call_incoming_cid:
                 for item in self._items_incoming:
                     if self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') == 'call_event_incoming':
-                        self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting call_event_incoming: {event.lower()}")
                         item(event.lower(), self._plugin_instance.get_shortname())
                     elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') == 'is_call_incoming':
-                        self._plugin_instance.logger.debug(f"Setting is_call_incoming: {False}")
+                        if debug_logger is True:
+                            self._plugin_instance.logger.debug(f"Setting is_call_incoming: {False}")
                         item(False, self._plugin_instance.get_shortname())
                 if not self._duration_item['call_duration_incoming'] is None:  # stop counter threads
-                    self._plugin_instance.logger.debug("Stopping Counter for Call Time")
+                    if debug_logger is True:
+                        self._plugin_instance.logger.debug("Stopping Counter for Call Time")
                     self._stop_counter('incoming')
                 self._call_incoming_cid = None
 
@@ -600,8 +615,10 @@ class AVM(SmartPlugin):
         self._calllist_cache = []
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"Plugin initialized with host: {self._fritz_device.get_host()}, port: {self._fritz_device.get_port()}, ssl: {self._fritz_device.is_ssl()}, verify: {self._verify}, user: {self._fritz_device.get_user()}, call_monitor: {self._call_monitor}")
-        if not self.init_webinterface():
-            self._init_complete = False
+
+        self.init_webinterface(WebInterface)
+        # if not self.init_webinterface():
+        #     self._init_complete = False
 
     def run(self):
         """
@@ -1050,15 +1067,15 @@ class AVM(SmartPlugin):
 
         aha_string = '/webservices/homeautoswitch.lua?'
         if ain != '':
-            aha_string = aha_string + f"ain={ain.replace(' ', '')}"
+            aha_string += f"ain={ain.replace(' ', '')}"
         if aha_action != '':
-            aha_string = aha_string + f"&switchcmd={aha_action}"
+            aha_string += f"&switchcmd={aha_action}"
         if aha_param != '':
-            aha_string = aha_string + f"&param={aha_param}"
+            aha_string += f"&param={aha_param}"
         if endtimestamp != '':
-            aha_string = aha_string + f"&endtimestamp={endtimestamp}"
+            aha_string += f"&endtimestamp={endtimestamp}"
         if sid != '':
-            aha_string = aha_string + f"&sid={sid}"
+            aha_string += f"&sid={sid}"
 
         # if endtimestamp == '':
             # aha_string = "/webservices/homeautoswitch.lua?ain={0}&switchcmd={1}&param={2}&sid={3}".format(ain.replace(" ", ""), aha_action, aha_param, sid)
@@ -1689,10 +1706,10 @@ class AVM(SmartPlugin):
         soap_data = self._assemble_soap_data(action, self._urn_map['DeviceInfo'])
 
         response =  self._get_post_request(url, soap_data, headers)
-        self._response_cache["dev_info_" + action] = response.content
+        self._response_cache[f"dev_info_{action}"] = response.content
 
         try:
-            xml = minidom.parseString(self._response_cache["dev_info_" + action])
+            xml = minidom.parseString(self._response_cache[f"dev_info_{action}"])
         except Exception as e:
             self.logger.error(f"get_device_log_from_tr064: Exception when parsing response: {e}")
             return
@@ -2383,15 +2400,15 @@ class AVM(SmartPlugin):
         headers['SOAPACTION'] = f"{self._urn_map['DeviceInfo']}#{action}"
         soap_data = self._assemble_soap_data(action, self._urn_map['DeviceInfo'])
 
-        if "dev_info_" + action not in self._response_cache:
+        if f"dev_info_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["dev_info_" + action] = response.content
+            self._response_cache[f"dev_info_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing dev_info response cache for action {action} and item {item.property.path}!")
 
         try:
-            xml = minidom.parseString(self._response_cache["dev_info_" + action])
+            xml = minidom.parseString(self._response_cache[f"dev_info_{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2448,15 +2465,15 @@ class AVM(SmartPlugin):
 
         soap_data = self._assemble_soap_data(action, self._urn_map['TAM'], {'NewIndex': tam_index})
 
-        if "tam_" + action not in self._response_cache:
+        if f"tam_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["tam_" + action] = response.content
+            self._response_cache[f"tam_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing TAM response cache for action {action} and item {item.property.path}!")
 
         try:
-            xml = minidom.parseString(self._response_cache["tam_" + action])
+            xml = minidom.parseString(self._response_cache[f"tam_{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2595,15 +2612,15 @@ class AVM(SmartPlugin):
         soap_data = self._assemble_soap_data(action, self._urn_map['WANDSLInterfaceConfig'])
 
         # if action has not been called in a cycle so far, request it and cache response
-        if "wan_dsl_interface_config_" + action not in self._response_cache:
+        if f"wan_dsl_interface_config_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["wan_dsl_interface_config_" + action] = response.content
+            self._response_cache[f"wan_dsl_interface_config_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_dsl_interface_config response cache for action {action} and item {item.property.path}!")
 
         try:
-            xml = minidom.parseString(self._response_cache["wan_dsl_interface_config_" + action])
+            xml = minidom.parseString(self._response_cache[f"wan_dsl_interface_config_{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2659,15 +2676,15 @@ class AVM(SmartPlugin):
             soap_data = self._assemble_soap_data(action, self._urn_map['WANCommonInterfaceConfig_alt'])
             url = self._build_url("/igdupnp/control/WANCommonIFC1")
         # if action has not been called in a cycle so far, request it and cache response
-        if "wan_common_interface_configuration_" + action not in self._response_cache:
+        if f"wan_common_interface_configuration_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["wan_common_interface_configuration_" + action] = response.content
+            self._response_cache[f"wan_common_interface_configuration_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_common_interface_configuration response cache for action {action} and item {item.property.path}!")
 
         try:
-            xml = minidom.parseString(self._response_cache["wan_common_interface_configuration_" + action])
+            xml = minidom.parseString(self._response_cache[f"wan_common_interface_configuration_{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2754,15 +2771,15 @@ class AVM(SmartPlugin):
         soap_data = self._assemble_soap_data(action, self._urn_map['WANIPConnection'])
 
         # if action has not been called in a cycle so far, request it and cache response
-        if "wan_ip_connection_" + action not in self._response_cache:
+        if f"wan_ip_connection_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["wan_ip_connection_" + action] = response.content
+            self._response_cache[f"wan_ip_connection_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_ip_connection response cache for action {action} and item {item.property.path}!")
 
         try:
-            xml = minidom.parseString(self._response_cache["wan_ip_connection_" + action])
+            xml = minidom.parseString(self._response_cache[f"wan_ip_connection_{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2897,15 +2914,15 @@ class AVM(SmartPlugin):
         headers['SOAPACTION'] = f"{self._urn_map['OnTel']}#{action}"
         soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'])
 
-        if "deflections" + action not in self._response_cache:
+        if f"deflections{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache["deflections" + action] = response.content
+            self._response_cache[f"deflections{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f'Accessing dev_info response cache for action {action}')
 
         try:
-            xml = minidom.parseString(self._response_cache["deflections" + action])
+            xml = minidom.parseString(self._response_cache[f"deflections{action}"])
         except Exception as e:
             self.logger.error(f"Exception when parsing response: {e}")
             return
@@ -2978,90 +2995,3 @@ class AVM(SmartPlugin):
 
         # read deflection after setting
         self._update_loop()
-
-    def init_webinterface(self):
-        """"
-        Initialize the web interface for this plugin
-
-        This method is only needed if the plugin is implementing a web interface
-        """
-        try:
-            self.mod_http = Modules.get_instance().get_module(
-                'http')  # try/except to handle running in a core version that does not support modules
-        except:
-            self.mod_http = None
-        if self.mod_http is None:
-            self.logger.error(f"Plugin '{self.get_shortname()}': Not initializing the web interface")
-            return False
-
-        # set application configuration for cherrypy
-        webif_dir = self.path_join(self.get_plugin_dir(), 'webif')
-        config = {
-            '/': {
-                'tools.staticdir.root': webif_dir,
-            },
-            '/static': {
-                'tools.staticdir.on': True,
-                'tools.staticdir.dir': 'static'
-            }
-        }
-
-        # Register the web interface as a cherrypy app
-        self.mod_http.register_webif(WebInterface(webif_dir, self),
-                                     self.get_shortname(),
-                                     config,
-                                     self.get_classname(), self.get_instance_name(),
-                                     description='')
-
-        return True
-
-
-# ------------------------------------------
-#    Webinterface of the plugin
-# ------------------------------------------
-
-class WebInterface(SmartPluginWebIf):
-
-    def __init__(self, webif_dir, plugin):
-        """
-        Initialization of instance of class WebInterface
-
-        :param webif_dir: directory where the webinterface of the plugin resides
-        :param plugin: instance of the plugin
-        :type webif_dir: str
-        :type plugin: object
-        """
-        self.webif_dir = webif_dir
-        self.plugin = plugin
-        self.logger = plugin.logger
-        self.tplenv = self.init_template_environment()
-
-    @cherrypy.expose
-    def index(self, reload=None, action=None):
-        """
-        Build index.html for cherrypy
-
-        Render the template and return the html file to be delivered to the browser
-
-        :return: contents of the template after beeing rendered
-        """
-        tabcount = 5
-        call_monitor_items = 0
-        if self.plugin._call_monitor:
-            call_monitor_items = self.plugin._monitoring_service.get_item_count_total()
-            tabcount = 6
-
-        tmpl = self.tplenv.get_template('index.html')
-        return tmpl.render(plugin_shortname=self.plugin.get_shortname(), plugin_version=self.plugin.get_version(),
-                           plugin_info=self.plugin.get_info(), tabcount=tabcount,
-                           avm_items=self.plugin.get_fritz_device().get_item_count(),
-                           call_monitor_items=call_monitor_items,
-                           p=self.plugin)
-
-    @cherrypy.expose
-    def reboot(self):
-        self.plugin.reboot()
-
-    @cherrypy.expose
-    def reconnect(self):
-        self.plugin.reconnect()
