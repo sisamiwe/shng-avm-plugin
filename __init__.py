@@ -109,7 +109,11 @@ class MonitoringService:
             self._listen_thread.join(1)
         except:
             pass
-        self.conn.shutdown(2)
+        
+        try:
+            self.conn.shutdown(2)
+        except:
+            pass
 
     def reconnect(self):
         """
@@ -355,7 +359,7 @@ class MonitoringService:
                     item(True, self._plugin_instance.get_shortname())
                 elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_caller_outgoing']:
                     name = self._callback(call_to)
-                    if name != '' and not name is None:
+                    if name != '' and name is not None:
                         item(name, self._plugin_instance.get_shortname())
                     else:
                         item(call_to, self._plugin_instance.get_shortname())
@@ -365,8 +369,7 @@ class MonitoringService:
                     item(event.lower(), self._plugin_instance.get_shortname())
                 elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_number_outgoing']:
                     item(call_from, self._plugin_instance.get_shortname())
-                elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in [
-                    'last_called_number_outgoing']:
+                elif self._plugin_instance.get_iattr_value(item.conf, 'avm_data_type') in ['last_called_number_outgoing']:
                     item(call_to, self._plugin_instance.get_shortname())
 
         # connection established
@@ -923,7 +926,7 @@ class AVM(SmartPlugin):
                             duration = int(duration[0:1]) * 3600 + int(duration[2:4]) * 60
                             item(duration, self.get_shortname())
                             break
-            if not self._monitoring_service is None:
+            if self._monitoring_service is not None:
                 self._monitoring_service.set_duration_item(item)
         # smarthome items using aha-interface
         elif self.get_iattr_value(item.conf, 'avm_data_type') in ['device_id', 'manufacturer', 'product_name', 'fw_version', 'connected',
@@ -1021,35 +1024,38 @@ class AVM(SmartPlugin):
                                           auth=HTTPDigestAuth(self._fritz_device.get_user(),
                                                               self._fritz_device.get_password()),
                                                               verify=self._verify)
-            # self.logger.debug(f"POST request response is: {response}")
         except Exception as e:
+            self.logger.error(f'Exception while sending POST request: {e}')
             if self._fritz_device.is_available():
-                self.logger.error(f'Exception while sending POST request: {e}')
                 self.set_device_availability(False)
             return
 
         else:
-            status_code = response.status_code
-            if status_code == 200:
+            try: 
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e: 
+                self.logger.error(f"POST request error: {e}")
+                self.set_device_availability(False)
+           
+            if response.status_code == 200:
                 if self.logger.isEnabledFor(logging.DEBUG):
                     self.logger.debug("Sending POST request successful")
-            else:
-                self.logger.error(f"POST request error code: {status_code}")
-
-            if not self._fritz_device.is_available():
-                self.set_device_availability(True)
-
-            response.raise_for_status()
-            return response
+                if not self._fritz_device.is_available():
+                    self.set_device_availability(True)
+                return response
 
     def _get_post_request_as_xml(self, url, data, headers):
         response = self._get_post_request(url, data, headers)
-        try:
-            xml = minidom.parseString(response.content)
-        except Exception as e:
-            self.logger.error(f'Exception while parsing response: {e}')
+        if response is None:
             return
-        return xml
+            
+        else:
+            try:
+                xml = minidom.parseString(response.content)
+            except Exception as e:
+                self.logger.error(f'Exception while parsing response: {e}')
+                return
+            return xml
 
     def _assemble_aha_interface(self, ain='', aha_action='', aha_param='', sid='', endtimestamp=''):
         """
@@ -1405,67 +1411,68 @@ class AVM(SmartPlugin):
         soap_data = self._assemble_soap_data(action, self._urn_map['OnTel'], {'NewPhonebookID': phonebook_id})
 
         xml = self._get_post_request_as_xml(url, soap_data, headers)
+        
+        if xml is not None:
+            calllist_url_xml = xml.getElementsByTagName('NewCallListURL')
 
-        calllist_url_xml = xml.getElementsByTagName('NewCallListURL')
+            if (len(calllist_url_xml) > 0):
+                calllist_url = calllist_url_xml[0].firstChild.data
 
-        if (len(calllist_url_xml) > 0):
-            calllist_url = calllist_url_xml[0].firstChild.data
+                try:
+                    calllist_result = self._session.get(calllist_url, timeout=self._timeout, verify=self._verify)
+                    calllist_xml = minidom.parseString(calllist_result.content)
+                except Exception as e:
+                    if self._fritz_device.is_available():
+                        self.logger.error(f"Exception when sending GET request or parsing response: {e}")
+                        self.set_device_availability(False)
+                    return
+                if not self._fritz_device.is_available():
+                    self.set_device_availability(True)
 
-            try:
-                calllist_result = self._session.get(calllist_url, timeout=self._timeout, verify=self._verify)
-                calllist_xml = minidom.parseString(calllist_result.content)
-            except Exception as e:
-                if self._fritz_device.is_available():
-                    self.logger.error(f"Exception when sending GET request or parsing response: {e}")
-                    self.set_device_availability(False)
-                return
-            if not self._fritz_device.is_available():
-                self.set_device_availability(True)
+                calllist_entries = calllist_xml.getElementsByTagName('Call')
+                result_entries = []
+                if len(calllist_entries) > 0:
+                    for calllist_entry in calllist_entries:
+                        result_entry = {}
 
-            calllist_entries = calllist_xml.getElementsByTagName('Call')
-            result_entries = []
-            if len(calllist_entries) > 0:
-                for calllist_entry in calllist_entries:
-                    result_entry = {}
+                        progress = True
 
-                    progress = True
+                        if len(filter_incoming) > 0:
+                            type_element = calllist_entry.getElementsByTagName("Type")
+                            if len(type_element) > 0:
+                                if type_element[0].hasChildNodes():
+                                    type = int(type_element[0].firstChild.data)
 
-                    if len(filter_incoming) > 0:
-                        type_element = calllist_entry.getElementsByTagName("Type")
-                        if len(type_element) > 0:
-                            if type_element[0].hasChildNodes():
-                                type = int(type_element[0].firstChild.data)
+                                    if type == 1 or type == 2:
+                                        called_number_element = calllist_entry.getElementsByTagName("CalledNumber")
+                                        if len(called_number_element) > 0:
+                                            if called_number_element[0].hasChildNodes():
+                                                called_number = called_number_element[0].firstChild.data
+                                                # self.logger.debug(called_number+" "+filter_incoming)
+                                                if not filter_incoming in called_number:
+                                                    progress = False
+                        if progress:
+                            attributes = ['Id', 'Type', 'Caller', 'Called', 'CalledNumber', 'Name', 'Numbertype', 'Device',
+                                          'Port', 'Date', 'Duration']
+                            for attribute in attributes:
+                                attribute_value = calllist_entry.getElementsByTagName(attribute)
+                                if len(attribute_value) > 0:
+                                    if attribute_value[0].hasChildNodes():
+                                        if attribute != 'Date':
+                                            result_entry[attribute] = attribute_value[0].firstChild.data
+                                        else:
+                                            result_entry[attribute] = datetime.strptime(
+                                                attribute_value[0].firstChild.data, '%d.%m.%y %H:%M')
 
-                                if type == 1 or type == 2:
-                                    called_number_element = calllist_entry.getElementsByTagName("CalledNumber")
-                                    if len(called_number_element) > 0:
-                                        if called_number_element[0].hasChildNodes():
-                                            called_number = called_number_element[0].firstChild.data
-                                            # self.logger.debug(called_number+" "+filter_incoming)
-                                            if not filter_incoming in called_number:
-                                                progress = False
-                    if progress:
-                        attributes = ['Id', 'Type', 'Caller', 'Called', 'CalledNumber', 'Name', 'Numbertype', 'Device',
-                                      'Port', 'Date', 'Duration']
-                        for attribute in attributes:
-                            attribute_value = calllist_entry.getElementsByTagName(attribute)
-                            if len(attribute_value) > 0:
-                                if attribute_value[0].hasChildNodes():
-                                    if attribute != 'Date':
-                                        result_entry[attribute] = attribute_value[0].firstChild.data
-                                    else:
-                                        result_entry[attribute] = datetime.strptime(
-                                            attribute_value[0].firstChild.data, '%d.%m.%y %H:%M')
-
-                        result_entries.append(result_entry)
-                return result_entries
+                            result_entries.append(result_entry)
+                    return result_entries
+                else:
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug("No calllist entries on the FritzDevice")
             else:
-                if self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug("No calllist entries on the FritzDevice")
-        else:
-            self.logger.error("Calllist not available on the FritzDevice")
+                self.logger.error("Calllist not available on the FritzDevice")
 
-        return
+            return
 
     def reboot(self):
         """
@@ -1706,7 +1713,8 @@ class AVM(SmartPlugin):
         soap_data = self._assemble_soap_data(action, self._urn_map['DeviceInfo'])
 
         response =  self._get_post_request(url, soap_data, headers)
-        self._response_cache[f"dev_info_{action}"] = response.content
+        if response is not None:
+            self._response_cache[f"dev_info_{action}"] = response.content
 
         try:
             xml = minidom.parseString(self._response_cache[f"dev_info_{action}"])
@@ -1770,10 +1778,11 @@ class AVM(SmartPlugin):
             return
 
         xml = self._get_post_request_as_xml(url, soap_data, headers)
-
-        tag_content = xml.getElementsByTagName('NewEnabled')
-        if len(tag_content) > 0:
-            item(tag_content[0].firstChild.data, self.get_shortname())
+        
+        if xml is not None:
+            tag_content = xml.getElementsByTagName('NewEnabled')
+            if len(tag_content) > 0:
+                item(tag_content[0].firstChild.data, self.get_shortname())
 
     def _update_host(self, item):
         """
@@ -2156,21 +2165,66 @@ class AVM(SmartPlugin):
                     hkr = element.getElementsByTagName('hkr')
                     if len(hkr) > 0:
                         for child in hkr:
-                            self._fritz_device._smarthome_devices[ain]['current_temperature'] = (int(child.getElementsByTagName('tist')[0].firstChild.data) - 16) / 2 + 8
-                            self._fritz_device._smarthome_devices[ain]['target_temperature'] = (int(child.getElementsByTagName('tsoll')[0].firstChild.data) - 16) / 2 + 8
-                            self._fritz_device._smarthome_devices[ain]['temperature_comfort'] = (int(child.getElementsByTagName('komfort')[0].firstChild.data) - 16) / 2 + 8
-                            self._fritz_device._smarthome_devices[ain]['temperature_reduced'] = (int(child.getElementsByTagName('absenk')[0].firstChild.data) - 16) / 2 + 8
-                            self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.getElementsByTagName('battery')[0].firstChild.data)
-                            self._fritz_device._smarthome_devices[ain]['battery_low'] = bool(int(child.getElementsByTagName('batterylow')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['window_open'] =  bool(int(child.getElementsByTagName('windowopenactiv')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['summer_active'] = bool(int(child.getElementsByTagName('summeractive')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['holiday_active'] = bool(int(child.getElementsByTagName('holidayactive')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['boost_active'] = bool(int(child.getElementsByTagName('boostactive')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['lock'] = bool(int(child.getElementsByTagName('lock')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['device_lock'] = bool(int(child.getElementsByTagName('devicelock')[0].firstChild.data))
-                            self._fritz_device._smarthome_devices[ain]['errorcode'] = int(child.getElementsByTagName('errorcode')[0].firstChild.data)
-                            self._fritz_device._smarthome_devices[ain]['windowopenactiveendtime'] = int(child.getElementsByTagName('windowopenactiveendtime')[0].firstChild.data)
-                            self._fritz_device._smarthome_devices[ain]['boostactiveendtime'] = int(child.getElementsByTagName('boostactiveendtime')[0].firstChild.data)
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['current_temperature'] = (int(child.getElementsByTagName('tist')[0].firstChild.data) - 16) / 2 + 8
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['target_temperature'] = (int(child.getElementsByTagName('tsoll')[0].firstChild.data) - 16) / 2 + 8
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['temperature_comfort'] = (int(child.getElementsByTagName('komfort')[0].firstChild.data) - 16) / 2 + 8
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['temperature_reduced'] = (int(child.getElementsByTagName('absenk')[0].firstChild.data) - 16) / 2 + 8
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['battery_level'] = int(child.getElementsByTagName('battery')[0].firstChild.data)
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['battery_low'] = bool(int(child.getElementsByTagName('batterylow')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['window_open'] =  bool(int(child.getElementsByTagName('windowopenactiv')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['summer_active'] = bool(int(child.getElementsByTagName('summeractive')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['holiday_active'] = bool(int(child.getElementsByTagName('holidayactive')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['boost_active'] = bool(int(child.getElementsByTagName('boostactive')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['lock'] = bool(int(child.getElementsByTagName('lock')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['device_lock'] = bool(int(child.getElementsByTagName('devicelock')[0].firstChild.data))
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['errorcode'] = int(child.getElementsByTagName('errorcode')[0].firstChild.data)
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['windowopenactiveendtime'] = int(child.getElementsByTagName('windowopenactiveendtime')[0].firstChild.data)
+                            except AttributeError:
+                                pass
+                            try:
+                                self._fritz_device._smarthome_devices[ain]['boostactiveendtime'] = int(child.getElementsByTagName('boostactiveendtime')[0].firstChild.data)
+                            except AttributeError:
+                                pass
 
                 # information of AVM smarthome device having temperature sensor
                 if 'temperature_sensor' in functions:
@@ -2179,11 +2233,11 @@ class AVM(SmartPlugin):
                         for child in temperature_element:
                             try:
                                 self._fritz_device._smarthome_devices[ain]['current_temperature'] = int(child.getElementsByTagName('celsius')[0].firstChild.data) / 10
-                            except ValueError:
+                            except AttributeError:
                                 pass
                             try:
                                 self._fritz_device._smarthome_devices[ain]['temperature_offset'] = int(child.getElementsByTagName('offset')[0].firstChild.data) / 10
-                            except ValueError:
+                            except AttributeError:
                                 pass
 
                     humidity_element = element.getElementsByTagName('humidity')
@@ -2191,7 +2245,7 @@ class AVM(SmartPlugin):
                         for child in humidity_element:
                             try:
                                 self._fritz_device._smarthome_devices[ain]['humidity'] = int(child.getElementsByTagName('rel_humidity')[0].firstChild.data)
-                            except ValueError:
+                            except AttributeError:
                                 pass
 
                 # information of AVM smarthome device having switch
@@ -2201,11 +2255,11 @@ class AVM(SmartPlugin):
                         for child in switch:
                             try:
                                 self._fritz_device._smarthome_devices[ain]['switch_state'] = bool(int(child.getElementsByTagName('celsius')[0].firstChild.data))
-                            except ValueError:
+                            except AttributeError:
                                 pass
                             try:
                                 self._fritz_device._smarthome_devices[ain]['switch_mode'] = str(child.getElementsByTagName('mode')[0].firstChild.data)
-                            except ValueError:
+                            except AttributeError:
                                 pass
 
                 # information of AVM smarthome device having powermeter
@@ -2215,15 +2269,15 @@ class AVM(SmartPlugin):
                         for child in powermeter:
                             try:
                                 self._fritz_device._smarthome_devices[ain]['power'] = int(child.getElementsByTagName('power')[0].firstChild.data) / 1000
-                            except ValueError:
+                            except AttributeError:
                                 pass
                             try:
                                 self._fritz_device._smarthome_devices[ain]['energy'] = int(child.getElementsByTagName('energy')[0].firstChild.data) / 1000
-                            except ValueError:
+                            except AttributeError:
                                 pass
                             try:
                                 self._fritz_device._smarthome_devices[ain]['voltage'] = int(child.getElementsByTagName('voltage')[0].firstChild.data) / 1000
-                            except ValueError:
+                            except AttributeError:
                                 pass
 
                 # information of AVM smarthome device having button
@@ -2243,11 +2297,11 @@ class AVM(SmartPlugin):
                         for child in alarm_element:
                             try:
                                 self._fritz_device._smarthome_devices[ain]['alarm'] = int(child.getElementsByTagName('state')[0].firstChild.data)
-                            except ValueError:
+                            except AttributeError:
                                 pass
                             try:
                                 self._fritz_device._smarthome_devices[ain]['lastalertchgtimestamp'] = int(child.getElementsByTagName('lastalertchgtimestamp')[0].firstChild.data)
-                            except ValueError:
+                            except AttributeError:
                                 pass
 
         # update items
@@ -2402,7 +2456,11 @@ class AVM(SmartPlugin):
 
         if f"dev_info_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"dev_info_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"dev_info_{action}"] = response.content
+            else:
+                return
+
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing dev_info response cache for action {action} and item {item.property.path}!")
@@ -2467,7 +2525,8 @@ class AVM(SmartPlugin):
 
         if f"tam_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"tam_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"tam_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing TAM response cache for action {action} and item {item.property.path}!")
@@ -2561,7 +2620,8 @@ class AVM(SmartPlugin):
 
         if not f"wlanconfig_{self.get_iattr_value(item.conf, 'avm_wlan_index')}_{action}" in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"wlanconfig_{self.get_iattr_value(item.conf, 'avm_wlan_index')}_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"wlanconfig_{self.get_iattr_value(item.conf, 'avm_wlan_index')}_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wlanconfig response cache for action {action} and item {item.property.path}!")
@@ -2614,7 +2674,8 @@ class AVM(SmartPlugin):
         # if action has not been called in a cycle so far, request it and cache response
         if f"wan_dsl_interface_config_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"wan_dsl_interface_config_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"wan_dsl_interface_config_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_dsl_interface_config response cache for action {action} and item {item.property.path}!")
@@ -2678,7 +2739,8 @@ class AVM(SmartPlugin):
         # if action has not been called in a cycle so far, request it and cache response
         if f"wan_common_interface_configuration_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"wan_common_interface_configuration_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"wan_common_interface_configuration_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_common_interface_configuration response cache for action {action} and item {item.property.path}!")
@@ -2773,7 +2835,8 @@ class AVM(SmartPlugin):
         # if action has not been called in a cycle so far, request it and cache response
         if f"wan_ip_connection_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"wan_ip_connection_{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"wan_ip_connection_{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Accessing wan_ip_connection response cache for action {action} and item {item.property.path}!")
@@ -2916,7 +2979,8 @@ class AVM(SmartPlugin):
 
         if f"deflections{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
-            self._response_cache[f"deflections{action}"] = response.content
+            if response is not None:
+                self._response_cache[f"deflections{action}"] = response.content
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f'Accessing dev_info response cache for action {action}')
