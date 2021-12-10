@@ -10,7 +10,8 @@ Changelog
 - Anbindung der Smarthome Devices über AHA-Interface hinzugefügt (getestet mit Fritz 440, Comet Dect)
 - Funktionen für Rufumleitungen hinzugefügt (getestet mit Fritzbox 7530)
 - Plugin Parameter "index" in "avm_tam_index" umbenannt
-- Code Cleanup
+- Code Cleanup (add new functions to mimimize code repetitions)
+- Verbesserung der Fehlerbehandlung (insbesondere bei Zugriffsfehlern auf des FritzDevice)
 
 Allgemeine Informationen
 ========================
