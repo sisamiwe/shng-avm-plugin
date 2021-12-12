@@ -2078,11 +2078,12 @@ class AVM(SmartPlugin):
         """Get the DOM elements for the device list using minidom."""
         devices = None
         plain = self._aha_request("getdevicelistinfos")
-        try:
-            dom = minidom.parseString(plain)
-            devices = dom.getElementsByTagName('device')
-        except Exception as e:
-             self.logger.error(f'_get_aha_device_elements: error {e} during parsing')
+        if plain is not None:
+            try:
+                dom = minidom.parseString(plain)
+                devices = dom.getElementsByTagName('device')
+            except Exception as e:
+                 self.logger.error(f'_get_aha_device_elements: error {e} during parsing')
         return devices
 
     def _update_aha_devices(self):
