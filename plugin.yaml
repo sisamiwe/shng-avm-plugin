@@ -12,7 +12,7 @@ plugin:
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
     support: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-    version: 1.6.0                 # Plugin version
+    version: 1.6.3                 # Plugin version
     sh_minversion: 1.6             # minimum shNG version to use this plugin
 #    sh_maxversion:                # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: True           # plugin supports multi instance
@@ -76,6 +76,17 @@ parameters:
         description:
             de: '(optional) Spezielle Rufnummern ausfiltern, die vom Callmonitor ignoriert werden sollen.'
             en: '(optional) Filter only specific numbers to be watched by call monitor'
+    webif_pagelength:
+        type: int
+        default: 100
+        valid_list:
+            - -1
+            - 25
+            - 50
+            - 100
+        description:
+            de: 'Anzahl an Items, die standardmäßig in einer Web Interface Tabelle pro Seite angezeigt werden'
+            en: 'Amount of items being listed in a web interface table per page by default'
 
 item_attributes:
     # Definition of item attributes defined by this plugin
@@ -139,18 +150,19 @@ item_attributes:
         - 'aha_device'
         - 'energy'
         - 'power'
-        - 'temperature'
-        - 'set_temperature_reduced'
-        - 'set_temperature_comfort'
         - 'hkr_device'
-        - 'firmware_version'
         - 'manufacturer'
         - 'product_name'
         - 'device_name'
         - 'connection_status'
         - 'device_id'
         - 'device_function'
-        # AHA Interface
+        # Deprecated avm data types. Please use alternate AHA interface type:
+        - 'temperature'
+        - 'set_temperature_reduced'
+        - 'set_temperature_comfort'
+        - 'firmware_version'
+        # AHA Interface attributes
         - 'device_id'
         - 'manufacturer'
         - 'product_name'
@@ -158,22 +170,28 @@ item_attributes:
         - 'connected'
         - 'device_name'
         - 'tx_busy'
-        - 'set_target_temperature'
-        - 'target_temperature'
+        - 'set_target_temperature'     # rw
+        - 'target_temperature'         # ro
         - 'current_temperature'
         - 'temperature_reduced'
         - 'temperature_comfort'
         - 'temperature_offset'
-        - 'set_hkrwindowopen'
         - 'windowopenactiveendtime'
-        - 'set_hkrboost'
+        - 'set_hkr_boost'              # rw
+        - 'hkr_boost'                  # ro
+        - 'set_simpleonoff'            # rw
+        - 'set_level'                  # rw
+        - 'set_hue'
+        - 'set_saturation'
+        - 'set_colortemperature'       # wo
         - 'boost_active'
         - 'boostactiveendtime'
-        - 'battery_low'
-        - 'battery_level'
+        - 'battery_low'                # ro
+        - 'battery_level'              # ro
         - 'lock'
         - 'device_lock'
-        - 'window_open'
+        - 'set_window_open'            # rw
+        - 'window_open'                # ro
         - 'summer_active'
         - 'holiday_active'
         - 'errorcode'
@@ -196,6 +214,7 @@ item_attributes:
         - 'deflection_mode'             # r/o Modus der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_outgoing'         # r/o Outgoing der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_phonebook_id'     # r/o Phonebook_ID der Zielrufnummer (Only valid if Type==fromPB); Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
+
 
     avm_incoming_allowed:
         type: str
@@ -545,17 +564,17 @@ item_structs:
         errorcode:
             avm_data_type@instance: errorcode
             type: num
-        set_hkrwindowopen:
-            avm_data_type@instance: set_hkrwindowopen
+        set_window_open:
+            avm_data_type@instance: set_window_open
             type: bool
         windowopenactiveendtime:
             avm_data_type@instance: windowopenactiveendtime
             type: num
-        set_hkrboost:
-            avm_data_type@instance: set_hkrboost
+        set_hkr_boost:
+            avm_data_type@instance: set_hkr_boost
             type: bool
-        boost_active:
-            avm_data_type@instance: boost_active
+        hkr_boost_active:
+            avm_data_type@instance: hkr_boost
             type: bool
         boostactiveendtime:
             avm_data_type@instance: boostactiveendtime
