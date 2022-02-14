@@ -2,7 +2,7 @@
 #
 #########################################################################
 #  Copyright 2016 René Frieß                      rene.friess(a)gmail.com
-#            2021 Michael Wenzel                    wenzel_michael@web.de
+#            2021 Michael Wenzel                  wenzel_michael(a)web.de
 #########################################################################
 #
 #  This file is part of SmartHomeNG.

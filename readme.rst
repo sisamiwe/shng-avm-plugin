@@ -4,6 +4,13 @@ AVM
 Changelog
 =========
 
+1.6.3
+-----
+
+- Debug des Attributs set_hkr_boost und hkr_boost
+- Update der Datatables im WebIF
+- Update des automatischen Update im WebIF
+
 1.6.0
 -----
 
