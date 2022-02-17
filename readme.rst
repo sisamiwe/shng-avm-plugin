@@ -10,6 +10,7 @@ Changelog
 - Debug des Attributs set_hkr_boost und hkr_boost
 - Update der Datatables im WebIF
 - Update des automatischen Update im WebIF
+- Debug Error 404 (Jeder Host wurde für Updates von Smarthome-Geräten angefragt)
 
 1.6.0
 -----
