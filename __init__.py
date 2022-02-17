@@ -777,6 +777,14 @@ class AVM(SmartPlugin):
                 self._update_deflections(item)
             elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection':
                 self._update_deflection_status(item)
+            elif self.get_iattr_value(item.conf, 'avm_data_type') in ['product_class']:
+                item(self.host_info['product_class'], self.get_shortname())
+            elif self.get_iattr_value(item.conf, 'avm_data_type') in ['manufacturer']:
+                item(self.host_info['manufacturer'], self.get_shortname())
+            elif self.get_iattr_value(item.conf, 'avm_data_type') in ['model']:
+                item(self.host_info['model'], self.get_shortname())
+            elif self.get_iattr_value(item.conf, 'avm_data_type') in ['description']:
+                item(self.host_info['description'], self.get_shortname())
 
         # clean TR-064 response cache
         self._response_cache = dict()
@@ -1070,6 +1078,7 @@ class AVM(SmartPlugin):
             self.set_device_availability(True)
 
     def _get_post_request(self, url, data, headers):
+
         try:
             response = self._session.post(url, data=data, timeout=self._timeout, headers=headers,
                                           auth=HTTPDigestAuth(self._fritz_device.get_user(),
@@ -1080,7 +1089,6 @@ class AVM(SmartPlugin):
             if self._fritz_device.is_available():
                 self.set_device_availability(False)
             return
-
         else:
             if response.status_code == 200:
                 self.logger.debug("Sending POST request successful")
@@ -1088,9 +1096,17 @@ class AVM(SmartPlugin):
                     self.set_device_availability(True)
                 return response
             else:
-                e = response.raise_for_status()
-                self.logger.error(f"POST request error: {e}")
-                self.set_device_availability(False)
+                try:
+                    response.raise_for_status()
+                except requests.exceptions.HTTPError as e:
+                    status_code = e.response.status_code
+                    start = data.find('NewMACAddress') + 14
+                    mac = data[start:start + 17]
+                    self.logger.error(f'Exception occurred: Error code {status_code} while sending POST request at: {e}')
+                    self.logger.error(f'Please check correctness of MAC-addresses {mac} in item.yaml')
+                    if self._fritz_device.is_available():
+                        self.set_device_availability(False)
+                    return
 
     def _get_post_request_as_xml(self, url, data, headers):
         response = self._get_post_request(url, data, headers)
@@ -1705,6 +1721,9 @@ class AVM(SmartPlugin):
 
         xml = self._get_post_request_as_xml(url, soap_data, headers)
 
+        if not xml:
+            return
+
         host_info = {
             "product_class": self._get_value_from_xml_node(xml, "NewProductClass"),
             "manufacturer": self._get_value_from_xml_node(xml, "NewManufacturerName"),
@@ -1831,7 +1850,15 @@ class AVM(SmartPlugin):
         """
         my_sid = self._request_session_id()
         query_string = f"/query.lua?mq_log=logger:status/log&sid={my_sid}"
-        r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
+        try:
+            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
+        except requests.exceptions.Timeout:
+            self.logger.debug(f"get_device_log_from_lua: get request timed out.")
+            return
+        except Exception as e:
+            self.logger.debug(f"get_device_log_from_lua: Error {e} occurred.")
+            return
+
         status_code = r.status_code
         if status_code == 200:
             if self.logger.isEnabledFor(logging.DEBUG):
@@ -2925,7 +2952,7 @@ class AVM(SmartPlugin):
             if int(self.get_iattr_value(item.conf, 'avm_wlan_index')) > 0:
                 url = self._build_url(f"/upnp/control/wlanconfig{self.get_iattr_value(item.conf, 'avm_wlan_index')}")
             else:
-                self.logger.error('No avm_wlan_index attribute provided')
+                self.logger.error('Wrong avm_wlan_index attribute provided')
         else:
             self.logger.error(f'No avm_wlan_index attribute provided for {item}')
 

@@ -101,6 +101,11 @@ item_attributes:
         - 'serial_number'
         - 'software_version'
         - 'hardware_version'
+        - 'product_class'
+        - 'manufacturer'
+        - 'model'
+        - 'description'
+
         - 'myfritz_status'
         - 'monitor_trigger'
         - 'is_call_incoming'
