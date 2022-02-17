@@ -627,12 +627,12 @@ class AVM(SmartPlugin):
 
         self._cycle = int(self.get_parameter_value('cycle'))
         self.webif_pagelength = self.get_parameter_value('webif_pagelength')
-
         self._sh = sh
 
-        # Response Cache: Dictionary for storing the result of requests which is used for several different items, refreshed each update cycle. Please use distinct keys!
-        self._response_cache = dict()
-        self._calllist_cache = []
+        self._response_cache = dict()                           # Response Cache: Dictionary for storing the result of requests which is used for several different items, refreshed each update cycle. Please use distinct keys!
+        self._calllist_cache = []                               #
+        self.host_info = dict()                                 # Dict to hold basic info of that host, gathered at startup
+
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 f"Plugin initialized with host: {self._fritz_device.get_host()}, port: {self._fritz_device.get_port()}, ssl: {self._fritz_device.is_ssl()}, verify: {self._verify}, user: {self._fritz_device.get_user()}, call_monitor: {self._call_monitor}")
@@ -648,6 +648,7 @@ class AVM(SmartPlugin):
         """
         self.scheduler_add('update', self._update_loop, prio=5, cycle=self._cycle, offset=2)
         self.alive = True
+        self._get_host_device_info()
 
     def stop(self):
         """
@@ -780,8 +781,9 @@ class AVM(SmartPlugin):
         # clean TR-064 response cache
         self._response_cache = dict()
 
-        # Update Items using AHA-Interface
-        self._update_aha_devices()
+        # update internal dict holding information of aha-devices if host is fritzbox
+        if 'box' in self.host_info['product_class'].lower():
+            self._update_aha_devices()
 
         if self._call_monitor:
             if not self.alive:
@@ -1080,18 +1082,15 @@ class AVM(SmartPlugin):
             return
 
         else:
-            try:
-                response.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                self.logger.error(f"POST request error: {e}")
-                self.set_device_availability(False)
-
             if response.status_code == 200:
-                if self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug("Sending POST request successful")
+                self.logger.debug("Sending POST request successful")
                 if not self._fritz_device.is_available():
                     self.set_device_availability(True)
                 return response
+            else:
+                e = response.raise_for_status()
+                self.logger.error(f"POST request error: {e}")
+                self.set_device_availability(False)
 
     def _get_post_request_as_xml(self, url, data, headers):
         response = self._get_post_request(url, data, headers)
@@ -1670,6 +1669,7 @@ class AVM(SmartPlugin):
         :param index: index of host in hosts list
         :return: Dict host data: name, interface_type, ip_address, address_source, mac_address, is_active, lease_time_remaining
         """
+
         url = self._build_url("/upnp/control/hosts")
         action = 'GetGenericHostEntry'
         headers = self._header.copy()
@@ -1687,8 +1687,33 @@ class AVM(SmartPlugin):
             'is_active': self._get_value_from_xml_node(xml, 'NewActive'),
             'lease_time_remaining': self._get_value_from_xml_node(xml, 'NewLeaseTimeRemaining')
         }
-
         return host
+
+    def _get_host_device_info(self):
+        """
+        Gets the detailed information of the host as device
+
+        Uses: https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/deviceinfoSCPD.pdf
+
+        """
+
+        url = self._build_url("/upnp/control/deviceinfo")
+        action = 'GetInfo'
+        headers = self._header.copy()
+        headers['SOAPACTION'] = f"{self._urn_map['DeviceInfo']}#{action}"
+        soap_data = self._assemble_soap_data(action, self._urn_map['DeviceInfo'])
+
+        xml = self._get_post_request_as_xml(url, soap_data, headers)
+
+        host_info = {
+            "product_class": self._get_value_from_xml_node(xml, "NewProductClass"),
+            "manufacturer": self._get_value_from_xml_node(xml, "NewManufacturerName"),
+            "model": self._get_value_from_xml_node(xml, "NewModelName"),
+            "description": self._get_value_from_xml_node(xml, "NewDescription"),
+            "sw_version": self._get_value_from_xml_node(xml, "NewSoftwareVersion"),
+            "hw_version": self._get_value_from_xml_node(xml, "NewHardwareVersion"),
+            }
+        self.host_info.update(host_info)
 
     def reconnect(self):
         """
@@ -2231,7 +2256,7 @@ class AVM(SmartPlugin):
             plain = self._request(url, params)
             if debug_logger is True:
                 self.logger.debug(f"Plain AHA request response is: {plain}")
-                self.logger.debug(f"Params are: {params}")
+                self.logger.debug(f"Params were: {params}")
 
             if plain == "inval":
                 self.logger.error(f"Respone of AHA request {cmd} was invalid")
@@ -2266,6 +2291,7 @@ class AVM(SmartPlugin):
 
         if debug_logger is True:
             self.logger.debug("Updating AHA Devices ...")
+
         devices = self._get_aha_device_elements()
         if devices is not None:
             for element in devices:
