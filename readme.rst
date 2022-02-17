@@ -11,6 +11,7 @@ Changelog
 - Update der Datatables im WebIF
 - Update des automatischen Update im WebIF
 - Debug Error 404 (Jeder Host wurde für Updates von Smarthome-Geräten angefragt)
+- Handle Error 500 if wrong mac-address is given in item.yaml
 
 1.6.0
 -----
