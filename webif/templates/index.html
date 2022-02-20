@@ -263,19 +263,21 @@
 				</tr>
 			</thead>
 			<tbody>
-				{% for logentry in logentries %}
-					<tr>
-						<td class="py-1">{{ logentry[4] }}</td>
-						<td class="py-1">{{ logentry[5] }}</td>
-						<td class="py-1">{{ logentry[0] }}</td>
-						<td class="py-1">
-							<a class="text-shng" target="_blank" href="https://service.avm.de/help/de/FRITZ-Box-7590/019/hilfe_syslog_{{ logentry[1] }}">
-								{{ logentry[1] }}
-							</a>
-						</td>
-						<td class="py-1">{{ _('cat_'+logentry[2]|string) }}</td>
-					</tr>
-				{% endfor %}
+                {% if logentries %}
+                    {% for logentry in logentries %}
+                        <tr>
+                            <td class="py-1">{{ logentry[4] }}</td>
+                            <td class="py-1">{{ logentry[5] }}</td>
+                            <td class="py-1">{{ logentry[0] }}</td>
+                            <td class="py-1">
+                                <a class="text-shng" target="_blank" href="https://service.avm.de/help/de/FRITZ-Box-7590/019/hilfe_syslog_{{ logentry[1] }}">
+                                    {{ logentry[1] }}
+                                </a>
+                            </td>
+                            <td class="py-1">{{ _('cat_'+logentry[2]|string) }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
 			</tbody>
 		</table>
 	</div>
@@ -348,9 +350,6 @@
 						<td>{{ p._fritz_device._smarthome_devices[ain] }}</td>
 					</tr>
 				{% endfor %}
-				<tr>
-				<td>{{ p._duration_item }}</td>
-				</tr>
 			</tbody>
 		</table>
 	</div>
