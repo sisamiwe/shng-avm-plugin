@@ -1042,7 +1042,7 @@ class AVM(SmartPlugin):
             my_sid = sid_xml[0].firstChild.data
         if len(challenge_xml) > 0:
             my_challenge = challenge_xml[0].firstChild.data
-        self.logger.info(f"Debug apriori SID: {my_sid}, Challenge: {my_challenge}")
+        self.logger.debug(f"Debug apriori SID: {my_sid}, Challenge: {my_challenge}")
 
         if my_sid and my_challenge:
             hash_response = self._get_hash_response(my_challenge, pwd)
@@ -1060,7 +1060,7 @@ class AVM(SmartPlugin):
                 mySID = sid_xml[0].firstChild.data
             if len(challenge_xml) > 0:
                 myChallenge = challenge_xml[0].firstChild.data
-            self.logger.info(f"Debug posterior SID: {mySID}, Challenge: {myChallenge}")
+            self.logger.debug(f"Debug posterior SID: {mySID}, Challenge: {myChallenge}")
             return mySID
 
     def _get_lua_post_request(self, url, data, headers):
@@ -2012,34 +2012,31 @@ class AVM(SmartPlugin):
             if len(tag_content) > 0:
                 item(tag_content[0].firstChild.data, self.get_shortname())
                 for child in item.return_children():
+                    data = None
                     if self.has_iattr(child.conf, 'avm_data_type'):
                         if self.get_iattr_value(child.conf, 'avm_data_type') == 'device_ip':
                             device_ip = xml.getElementsByTagName('NewIPAddress')
                             if len(device_ip) > 0:
-                                if not device_ip[0].firstChild is None:
-                                    child(device_ip[0].firstChild.data, self.get_shortname())
+                                if device_ip[0].firstChild is not None:
+                                    data = device_ip[0].firstChild.data
                                 else:
-                                    child('', self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(child.conf, 'avm_data_type')} not available on the FritzDevice")
+                                    data = ''
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'device_connection_type':
                             device_connection_type = xml.getElementsByTagName('NewInterfaceType')
                             if len(device_connection_type) > 0:
-                                if not device_connection_type[0].firstChild is None:
-                                    child(device_connection_type[0].firstChild.data, self.get_shortname())
+                                if device_connection_type[0].firstChild is not None:
+                                    data = device_connection_type[0].firstChild.data
                                 else:
-                                    child('', self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(child.conf, 'avm_data_type')} not available on the FritzDevice")
+                                    data = ''
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'device_hostname':
                             data = self._get_value_from_xml_node(xml, 'NewHostName')
-                            if data is not None:
-                                child(data, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(child.conf, 'avm_data_type')} not available on the FritzDevice")
+
+                        if data is not None:
+                            child(data, self.get_shortname())
+                        else:
+                            self.logger.info(
+                                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
+
         else:
             item(0)
             if debug_logger is True:
@@ -2090,28 +2087,26 @@ class AVM(SmartPlugin):
                     self.logger.error(
                         f'NewSwitchState für AHA Device has a non-supported value of {element_xml[0].firstChild.data}')
                 for child in item.return_children():
+                    value = None
                     if self.has_iattr(child.conf, 'avm_data_type'):
                         if self.get_iattr_value(child.conf, 'avm_data_type') == 'temperature':
                             temp = xml.getElementsByTagName('NewTemperatureCelsius')
                             if len(temp) > 0:
-                                child(int(temp[0].firstChild.data) / 10, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not supported")
+                                value = int(temp[0].firstChild.data) / 10
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'power':
                             power = xml.getElementsByTagName('NewMultimeterPower')
                             if len(power) > 0:
-                                child(int(power[0].firstChild.data) / 100, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not supported")
+                                value = int(power[0].firstChild.data) / 100
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'energy':
                             energy = xml.getElementsByTagName('NewMultimeterEnergy')
                             if len(energy) > 0:
-                                child(int(energy[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not supported")
+                                value = int(energy[0].firstChild.data)
+
+                        if value:
+                            child(value, self.get_shortname())
+                        else:
+                            self.logger.info(
+                                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
             else:
                 self.logger.error(
                     f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
@@ -2133,85 +2128,58 @@ class AVM(SmartPlugin):
                     tempstate = 3
                 item(int(tempstate))
                 for child in item.return_children():
+                    value = None
                     if self.has_iattr(child.conf, 'avm_data_type'):
                         if self.get_iattr_value(child.conf, 'avm_data_type') == 'temperature':
                             is_temperature = xml.getElementsByTagName('NewTemperatureCelsius')
                             if len(is_temperature) > 0:
-                                child(int(is_temperature[0].firstChild.data) / 10)
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = int(is_temperature[0].firstChild.data) / 10
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'set_temperature':
                             set_temperature = xml.getElementsByTagName('NewHkrSetTemperature')
                             if len(set_temperature) > 0:
-                                child(int(set_temperature[0].firstChild.data) / 10, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = int(set_temperature[0].firstChild.data) / 10
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'set_temperature_reduced':
                             set_temperature_reduced = xml.getElementsByTagName('NewHkrReduceTemperature')
                             if len(set_temperature_reduced) > 0:
-                                child(int(set_temperature_reduced[0].firstChild.data) / 10, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = int(set_temperature_reduced[0].firstChild.data) / 10
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'set_temperature_comfort':
                             set_temperature_comfort = xml.getElementsByTagName('NewHkrComfortTemperature')
                             if len(set_temperature_comfort) > 0:
-                                child(int(set_temperature_comfort[0].firstChild.data) / 10, self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = int(set_temperature_comfort[0].firstChild.data) / 10
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'firmware_version':
                             firmware_version = xml.getElementsByTagName('NewFirmwareVersion')
                             if len(firmware_version) > 0:
-                                child(str(firmware_version[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(firmware_version[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'manufacturer':
                             manufacturer = xml.getElementsByTagName('NewManufacturer')
                             if len(manufacturer) > 0:
-                                child(str(manufacturer[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(manufacturer[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'product_name':
                             product_name = xml.getElementsByTagName('NewProductName')
                             if len(product_name) > 0:
-                                child(str(product_name[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(product_name[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'device_name':
                             device_name = xml.getElementsByTagName('NewDeviceName')
                             if len(device_name) > 0:
-                                child(str(device_name[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(device_name[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'connection_status':
                             connection_status = xml.getElementsByTagName('NewPresent')
                             if len(connection_status) > 0:
-                                child(str(connection_status[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(connection_status[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'device_id':
                             device_id = xml.getElementsByTagName('NewDeviceId')
                             if len(device_id) > 0:
-                                child(str(device_id[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(device_id[0].firstChild.data)
                         elif self.get_iattr_value(child.conf, 'avm_data_type') == 'device_function':
                             device_function = xml.getElementsByTagName('NewFunctionBitMask')
                             if len(device_function) > 0:
-                                child(str(device_function[0].firstChild.data), self.get_shortname())
-                            else:
-                                self.logger.error(
-                                    f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
+                                value = str(device_function[0].firstChild.data)
 
+                        if value:
+                            child(value, self.get_shortname())
+                        else:
+                            self.logger.info(
+                                f"Argument {self.get_iattr_value(child.conf, 'avm_data_type')} of Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
             else:
                 self.logger.error(
                     f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice with AIN {item.conf['ain'].strip()}.")
@@ -2813,34 +2781,23 @@ class AVM(SmartPlugin):
             self.logger.error(f"Exception when parsing response: {e}")
             return
 
+
         if self.get_iattr_value(item.conf, 'avm_data_type') == 'uptime':
             element_xml = xml.getElementsByTagName('NewUpTime')
-            if len(element_xml) > 0:
-                item(int(element_xml[0].firstChild.data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'software_version':
             element_xml = xml.getElementsByTagName('NewSoftwareVersion')
-            if len(element_xml) > 0:
-                item(element_xml[0].firstChild.data, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'hardware_version':
             element_xml = xml.getElementsByTagName('NewHardwareVersion')
-            if len(element_xml) > 0:
-                item(element_xml[0].firstChild.data, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'serial_number':
             element_xml = xml.getElementsByTagName('NewSerialNumber')
-            if len(element_xml) > 0:
-                item(element_xml[0].firstChild.data, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+        else:
+            element_xml = None
+
+        if len(element_xml) > 0:
+            item(element_xml[0].firstChild.data, self.get_shortname())
+        else:
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_tam(self, item):
         """
@@ -2988,26 +2945,23 @@ class AVM(SmartPlugin):
             self.logger.error(f"Exception when parsing response: {e}")
             return
         if self.get_iattr_value(item.conf, 'avm_data_type') == 'wlanconfig':
-            newEnable = self._get_value_from_xml_node(xml, 'NewEnable')
-            if newEnable is not None:
-                item(newEnable, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+            data = self._get_value_from_xml_node(xml, 'NewEnable')
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wlanconfig_ssid':
-            newSSID = self._get_value_from_xml_node(xml, 'NewSSID')
-            if newSSID is not None:
-                item(newSSID, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+            data = self._get_value_from_xml_node(xml, 'NewSSID')
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wlan_guest_time_remaining':
             element_xml = xml.getElementsByTagName('NewX_AVM-DE_TimeRemain')
             if len(element_xml) > 0:
-                item(int(element_xml[0].firstChild.data), self.get_shortname())
+                data = int(element_xml[0].firstChild.data)
             else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                data = None
+        else:
+            data = None
+
+        if data is not None:
+            item(data, self.get_shortname())
+        else:
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_wan_dsl_interface_config(self, item):
         """
@@ -3047,18 +3001,19 @@ class AVM(SmartPlugin):
 
         if self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_upstream':
             element_xml = xml.getElementsByTagName('NewUpstreamCurrRate')
-            if len(element_xml) > 0:
-                item(int(element_xml[0].firstChild.data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_downstream':
             element_xml = xml.getElementsByTagName('NewDownstreamCurrRate')
             if len(element_xml) > 0:
-                item(int(element_xml[0].firstChild.data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                value = int(element_xml[0].firstChild.data)
+        else:
+            element_xml = None
+
+        if element_xml is not None and len(element_xml) > 0:
+            item(int(element_xml[0].firstChild.data), self.get_shortname())
+        else:
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_wan_common_interface_configuration(self, item):
         """
@@ -3115,70 +3070,34 @@ class AVM(SmartPlugin):
 
         if self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_total_packets_sent':
             data = self._get_value_from_xml_node(xml, 'NewTotalPacketsSent')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_total_packets_received':
             data = self._get_value_from_xml_node(xml, 'NewTotalPacketsReceived')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_current_packets_sent':
             data = self._get_value_from_xml_node(xml, 'NewPacketSendRate')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_current_packets_received':
             data = self._get_value_from_xml_node(xml, 'NewPacketReceiveRate')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_total_bytes_sent':
             data = self._get_value_from_xml_node(xml, 'NewTotalBytesSent')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_total_bytes_received':
             data = self._get_value_from_xml_node(xml, 'NewTotalBytesReceived')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_current_bytes_sent':
             data = self._get_value_from_xml_node(xml, 'NewByteSendRate')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_current_bytes_received':
             data = self._get_value_from_xml_node(xml, 'NewByteReceiveRate')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_link':
             data = self._get_value_from_xml_node(xml, 'NewPhysicalLinkStatus')
-            if data is not None:
-                if data == 'Up':
-                    item(True, self.get_shortname())
-                else:
-                    item(False, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+            data = True if data == 'Up' else False
+        else:
+            data = None
+
+        if isinstance(data, str) and data.isdigit():
+            data = int(data)
+
+        if data is not None:
+            item(data, self.get_shortname())
+        else:
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_wan_ip_connection(self, item):
         """
@@ -3219,40 +3138,26 @@ class AVM(SmartPlugin):
             self.logger.error(f"Exception when parsing response: {e}")
             return
 
-        if self.get_iattr_value(item.conf, 'avm_data_type') in ['wan_connection_status', 'wan_is_connected']:
+        if self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_connection_status':
             data = self._get_value_from_xml_node(xml, 'NewConnectionStatus')
-            if data is not None:
-                if self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_connection_status':
-                    item(data, self.get_shortname())
-                elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_is_connected':
-                    if data == 'Connected':
-                        item(True, self.get_shortname())
-                    else:
-                        item(False, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+        elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_is_connected':
+            data = True if self._get_value_from_xml_node(xml, 'NewConnectionStatus') == 'Connected' else False
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_uptime':
             data = self._get_value_from_xml_node(xml, 'NewUptime')
-            if data is not None:
-                item(int(data), self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+            if isinstance(data, str) and data.isdigit():
+                data = int(data)
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_connection_error':
             data = self._get_value_from_xml_node(xml, 'NewLastConnectionError')
-            if data is not None:
-                item(data, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wan_ip':
             data = self._get_value_from_xml_node(xml, 'NewExternalIPAddress')
-            if data is not None:
-                item(data, self.get_shortname())
-            else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+        else:
+            data = None
+
+        if data is not None:
+            item(data, self.get_shortname())
+        else:
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _get_value_from_xml_node(self, node, tag_name):
         data = None
@@ -3283,8 +3188,8 @@ class AVM(SmartPlugin):
         if result is not None:
             item(result, self.get_shortname())
         else:
-            self.logger.error(
-                f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+            self.logger.info(
+                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def get_deflection(self, deflection_id=0):
         """
@@ -3322,8 +3227,8 @@ class AVM(SmartPlugin):
                 if result is not None:
                     item(result, self.get_shortname())
                 else:
-                    self.logger.error(
-                        f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                    self.logger.info(
+                        f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
             else:
                 self.logger.error('Deflection Index incorrect')
         else:
@@ -3338,8 +3243,8 @@ class AVM(SmartPlugin):
                     status = bool(int(deflection[deflection_index]['Enable']))
                     item(status, self.get_shortname())
                 else:
-                    self.logger.error(
-                        f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                    self.logger.info(
+                        f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
             else:
                 self.logger.error('Deflection Index incorrect')
         else:

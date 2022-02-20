@@ -414,10 +414,10 @@ item_structs:
             avm_data_type@instance: deflection_phonebook_id
 
     wan:
-#        ip:
-#            type: str
-#            visu_acl: ro
-#            avm_data_type@instance: wan_ip
+        ip:
+            type: str
+            visu_acl: ro
+            avm_data_type@instance: wan_ip
         connection_status:
             type: str
             visu_acl: ro

@@ -14,6 +14,7 @@ Changelog
 - Information zu Attributwerten von 'avm_data_type' ergänzt
 - Beispiel für Anwendung der structs mit Instanz erstellt
 - Änderung von 'temperatur' auf 'temperature' im struct
+- Verbesserung der LogAusgabe, wenn AbfrageAttribut vorhanden aber Wert nicht vorhanden ist
 
 1.6.0
 ~~~~~
