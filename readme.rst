@@ -5,6 +5,15 @@ AVM
 Changelog
 ---------
 
+1.6.4
+~~~~~
+
+- set attribute 'ain' as deprecated; use 'avm_ain' instead
+- clean up of possible attribute values für avm_data_type
+- clean update_black_list for updating aha_inteface
+- improve avm_data_type for r/o, w/o und r/w items
+- Streamline code on _update_x methods
+
 1.6.3
 ~~~~~
 

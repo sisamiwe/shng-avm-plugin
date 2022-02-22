@@ -12,7 +12,7 @@ plugin:
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
     support: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-    version: 1.6.3                 # Plugin version
+    version: 1.6.4                 # Plugin version
     sh_minversion: 1.6             # minimum shNG version to use this plugin
 #    sh_maxversion:                # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: True           # plugin supports multi instance
@@ -102,10 +102,6 @@ item_attributes:
         - 'serial_number'               # r/o
         - 'software_version'            # r/o
         - 'hardware_version'            # r/o
-        - 'product_class'               # r/o
-        - 'manufacturer'                # r/o
-        - 'model'                       # r/o
-        - 'description'                 # r/o
         # Myfritz Attribute
         - 'myfritz_status'              # r/o
         # Call Monitor Attribute
@@ -120,32 +116,32 @@ item_attributes:
         - 'is_call_outgoing'            # r/o
         - 'call_duration_outgoing'      # r/o
         - 'last_caller_outgoing'        # r/o
-        - 'last_number_outgoing'        # r/o
+        - 'last_number_outgoing'        # r/o    
         - 'last_called_number_outgoing' # r/o
         - 'last_call_date_outgoing'     # r/o
         - 'call_event_outgoing'         # r/o
-        - 'call_direction'              # r/o
+        - 'call_direction'              # r/o    
         - 'call_event'                  # r/o
         # TAM Attribute
         - 'tam'                         # r/w
         - 'tam_name'                    # r/o
         - 'tam_old_message_number'      # r/o       not supported / implemented
         - 'tam_new_message_number'      # r/o
-        - 'tam_total_message_number'    # r/o
+        - 'tam_total_message_number'    # r/o    
         # WAN Attribute
         - 'wan_connection_status'       # r/o
-        - 'wan_connection_error'        # r/o
+        - 'wan_connection_error'        # r/o    
         - 'wan_is_connected'            # r/o
         - 'wan_uptime'                  # r/o
         - 'wan_ip'                      # r/o
-        - 'wan_upstream'                # r/o
+        - 'wan_upstream'                # r/o    
         - 'wan_downstream'              # r/o
         - 'wan_total_packets_sent'      # r/o
         - 'wan_total_packets_received'  # r/o
-        - 'wan_current_packets_sent'    # r/o
+        - 'wan_current_packets_sent'    # r/o    
         - 'wan_current_packets_received' # r/o
         - 'wan_total_bytes_sent'        # r/o
-        - 'wan_total_bytes_received'    # r/o
+        - 'wan_total_bytes_received'    # r/o    
         - 'wan_current_bytes_sent'      # r/o
         - 'wan_current_bytes_received'  # r/o
         - 'wan_link'                    # r/o
@@ -154,13 +150,13 @@ item_attributes:
         - 'wlanconfig_ssid'             # r/o
         - 'wlan_guest_time_remaining'   # r/o
         # Host Attribute
-        - 'network_device'              # r/o       Defines Network device via MAC-Adresse
+        - 'network_device'              # r/o       Defines Network device via MAC-Adresse                  
         - 'device_ip'                   # r/o       Geräte-IP (Muss Child von 'network_device' sein)            ipv4
         - 'device_connection_type'      # r/o       Verbindungstyp (Muss Child von 'network_device' sein)       str
         - 'device_hostname'             # r/o       Gerätename (Muss Child von 'network_device' sein)           str
         - 'connection_status'           # r/o       Verbindungsstatus (Muss Child von 'network_device' sein)    bool
         # Smarthome Attribute (Deprecated avm data types. Please use alternative AHA interface type)
-        - 'aha_device'                  # r/w       Steckdose schalten; siehe "switch_state"
+        - 'aha_device'                  # r/w       Steckdose schalten; siehe "switch_state"    
         - 'hkr_device'                  # r/o       Status des HKR (OPEN; CLOSED; TEMP)
         - 'set_temperature'             # r/o       siehe "target_temperature"
         - 'temperature'                 # r/o       siehe "current_temperature"
@@ -178,28 +174,29 @@ item_attributes:
         - 'deflection_mode'             # r/o       Modus der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_outgoing'         # r/o       Outgoing der Rufumleitung; Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
         - 'deflection_phonebook_id'     # r/o       Phonebook_ID der Zielrufnummer (Only valid if Type==fromPB); Angabe der Rufumleitung mit Parameter "avm_deflection_index" im Item bzw Parent-Item
-        #  AHA Interface attributes
+        # AHA Interface attributes
         - 'device_id'                   # r/o       Geräte -ID                                      str
         - 'manufacturer'                # r/o       Hersteller                                      str
         - 'product_name'                # r/o       Produktname                                     str
         - 'fw_version'                  # r/o       Firmware Version                                str
         - 'connected'                   # r/o       Verbindungsstatus                               bool
         - 'device_name'                 # r/o       Gerätename                                      str
-        - 'tx_busy'                     # r/o       Verbindung aktiv                                bool
+        - 'tx_busy'                     # r/o       Verbindung aktiv                                bool    
         - 'device_functions'            # r/o       Im Gerät verhandene Funktionen                  list
+        
         - 'set_target_temperature'      # w/o       Soll-Temperatur Setzen                          num
         - 'target_temperature'          # r/w       Soll-Temperatur (Status aund Setzen)            num
         - 'current_temperature'         # r/o       Ist-Temperatur                                  num
         - 'temperature_reduced'         # r/o       Eingestellte reduzierte Temperatur              num
-        - 'temperature_comfort'         # r/o       Eingestellte Komfort-Temperatur                 num
+        - 'temperature_comfort'         # r/o       Eingestellte Komfort-Temperatur                 num  
         - 'temperature_offset'          # r/o       Eingestellter Temperatur-Offset                 num
-        - 'set_window_open'             # w/o       "Window Open" Funktionen Setzen                 bool
-        - 'window_open'                 # r/w       "Window Open" Funktion (Status aund Setzen)     bool
-        - 'windowopenactiveendtime'     # r/o       Zeitliches Ende der "Window Open" Funktion      num
+        - 'set_window_open'             # w/o       "Window Open" Funktionen Setzen                 bool       
+        - 'window_open'                 # r/w       "Window Open" Funktion (Status aund Setzen)     bool    
+        - 'windowopenactiveendtime'     # r/o       Zeitliches Ende der "Window Open" Funktion      num  
         - 'set_hkr_boost'               # w/o       "Boost" Funktion Setzen                         bool
         - 'hkr_boost'                   # r/w       "Boost" Funktion (Status aund Setzen)           bool
-        - 'boostactiveendtime'          # r/o       Zeitliches Ende der "Boost" Funktion            num
-        - 'boost_active'                # r/o       Status der "Boost" Funktion                     bool
+        # - 'boost_active'                # r/o       Status der "Boost" Funktion                     bool           deprecated
+        - 'boostactiveendtime'          # r/o       Zeitliches Ende der "Boost" Funktion            num  
         - 'summer_active'               # r/o       Status der "Sommer" Funktion                    bool
         - 'holiday_active'              # r/o       Status der "Holiday" Funktion                   bool
         - 'battery_low'                 # r/o       "Battery low" Status                            bool
@@ -207,17 +204,29 @@ item_attributes:
         - 'lock'                        # r/o       Tastensperre über UI/API aktiv                  bool
         - 'device_lock'                 # r/o       Tastensperre direkt am Gerät ein                bool
         - 'errorcode'                   # r/o       Fehlercodes die der HKR liefert                 num
+        
         - 'set_simpleonoff'             # w/o       Gerät/Aktor/Lampe an-/ausschalten               bool
+        - 'simpleonoff'                 # w/r       Gerät/Aktor/Lampe (Status und Setzen)           bool            neu 1.6.4
+        
         - 'set_level'                   # w/o       Level/Niveau von 0 bis 255 Setzen               num
+        - 'level'                       # w/r       Level/Niveau von 0 bis 255 (Setzen & Status)    num             neu 1.6.4
+        - 'set_levelpercentage'         # w/o       Level/Niveau von 0% bis 100% Setzen             num
+        - 'levelpercentage'             # w/r       Level/Niveau von 0% bis 100% (Setzen & Status)  num             neu 1.6.4
         - 'set_hue'                     # w/o       Hue Setzen                                      num
+        - 'hue'                         # w/r       Hue (Status und Setzen)                         num             neu 1.6.4
         - 'set_saturation'              # w/o       Saturation Setzen                               num
+        - 'saturation'                  # w/r       Saturation (Status und Setzen)                  num             neu 1.6.4
         - 'set_colortemperature'        # w/o       Farbtemperatur Setzten                          num
+        - 'colortemperature'            # w/r       Farbtemperatur (Status und Setzen)              num             neu 1.6.4
+
         - 'switch_state'                # r/w       Schaltzustand Steckdose (Status und Setzen)     bool
         - 'switch_mode'                 # r/o       Zeitschaltung oder manuell schalten             bool
         - 'switch_toggle'               # w/o       Schaltzustand umschalten (toggle)               bool
+        
         - 'power'                       # r/o       Leistung in W (Aktualisierung alle 2 min)       num
         - 'energy'                      # r/o       absoluter Verbrauch seit Inbetriebnahme         num
         - 'voltage'                     # r/o       Spannung in V (Aktualisierung alle 2 min)       num
+        
         - 'humidity'                    # r/o       Relative Luftfeuchtigkeit in % (FD440)          num
         - 'alert_state'                 # r/o       letzter übermittelter Alarmzustand              bool
 
@@ -250,8 +259,14 @@ item_attributes:
         type: str
         mandatory: False
         description:
-            de: 'Definition der Aktor Identifikationsnummer (AIN)Items vom avm_data_type `aha_device`. Nur für diese Items mandatory!'
+            de: 'Definition der AktorIdentifikationsnummer (AIN) Items vom avm_data_type `aha_device`. Nur für diese Items mandatory!'
             en: 'Definition of the actor identification number (AIN) for items of avm_data_type `aha_device`. Only mandatory for these items!'
+    avm_ain:
+        type: str
+        mandatory: False
+        description:
+            de: "Definition der AktorIdentifikationsNummer (AIN) Items vom avm_data_types für `AHA-Interface`. Nur für diese Items mandatory!"
+            en: "Definition of the ActorIdentificationNumber (AIN) for items of avm_data_types `AHA-Interface`. Only mandatory for these items!"
     avm_tam_index:
         type: int
         mandatory: False
@@ -268,6 +283,12 @@ item_attributes:
             en: 'Index deflection, normally a "1" for the first one.'
         valid_min: 1
         valid_max: 32
+        
+    avm_read_afterwrite:
+        type: num
+        description:
+            de: 'Konfiguriert eine Verzögerung in Sekunden nachdem ein Lesekommando nach einem Schreibkommando gesendet wird.'
+            en: 'Configures delay in seconds to issue a read command after write command'
 
 item_structs:
     info:
@@ -414,10 +435,6 @@ item_structs:
             avm_data_type@instance: deflection_phonebook_id
 
     wan:
-        ip:
-            type: str
-            visu_acl: ro
-            avm_data_type@instance: wan_ip
         connection_status:
             type: str
             visu_acl: ro
@@ -483,6 +500,11 @@ item_structs:
             visu_acl: rw
             avm_data_type@instance: wlanconfig    # 5 GHz
             avm_wlan_index@instance: 2
+        wlan_2_ssid:
+            type: str
+            visu_acl: ro
+            avm_data_type@instance: wlanconfig_ssid    # 5 GHz
+            avm_wlan_index@instance: 2
         wlan_gast:
             type: bool
             visu_acl: rw
@@ -538,6 +560,9 @@ item_structs:
         present:
             avm_data_type@instance: connected
             type: bool
+        functions:
+            avm_data_type@instance: device_functions
+            type: list
 
     smarthome_hkr:
         current_temperature:
@@ -582,7 +607,7 @@ item_structs:
         set_hkr_boost:
             avm_data_type@instance: set_hkr_boost
             type: bool
-        hkr_boost_active:
+        hkr_boost:
             avm_data_type@instance: hkr_boost
             type: bool
         boostactiveendtime:
@@ -596,7 +621,7 @@ item_structs:
             type: bool
 
     smarthome_temperature_sensor:
-        temperature:
+        temperatur:
             avm_data_type@instance: current_temperature
             type: num
         temperature_offset:
@@ -627,6 +652,7 @@ item_structs:
         voltage:
             avm_data_type@instance: voltage
             type: num
+
 
 logic_parameters: NONE
     # Definition of logic parameters defined by this plugin
