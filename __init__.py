@@ -1264,7 +1264,7 @@ class AVM(SmartPlugin):
         """Check if knows Session ID is still valid"""
 
         if self.debug_log:
-            self.logger.warning(f"_check_sid called")
+            self.logger.debug(f"_check_sid called")
 
         url = self._build_url(self._login_sid_route, lua=True)
         params = {"sid": self.sid}
