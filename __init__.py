@@ -1271,13 +1271,13 @@ class AVM(SmartPlugin):
         response = self._request(url, params)
         sid, challenge, blocktime = self._get_login_infos_from_http_request(response)
         if self.debug_log:
-            self.logger.warning(f"_check_sid: SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
+            self.logger.debug(f"_check_sid: SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
 
         if sid == "0000000000000000":
             self.logger.warning(f"Session ID is invalid. Try to generate new one.")
             self._get_sid()
         else:
-            self.logger.warning(f"Session ID is still valid.")
+            self.logger.info(f"Session ID is still valid.")
 
     @staticmethod
     def _calculate_pbkdf2_response(challenge: str, password: str) -> str:
