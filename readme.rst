@@ -11,11 +11,10 @@ Changelog
 - Update auf PBKDF2 zur Absicherung der Anmeldung; MD5 als Backup
 - Methoden "_get_sid", "_get_login_infos_from_http_request", "_http_logout_request", "_check_sid", "_calculate_pbkdf2_response", "_calculate_md5_response" hinzu
 
-
 1.6.4
 ~~~~~
 
-- Attribut 'ain' deprecated gesetzt; Verwendung von 'avm_ain', so dass alle avm Plugin Attribute auch mit avm_ beginnen
+- Attribut 'ain' deprecated gesetzt; Verwendung von 'avm_ain', so dass alle avm Plugin Attribute auch mit 'avm' beginnen
 - Überprüfung aller unterstützen Attributwerte avm_data_type
 - Anpassung der update_black_list
 - Verbesserung des Handling von avm_data_type für r/o, w/o und r/w Items
