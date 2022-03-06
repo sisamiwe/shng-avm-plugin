@@ -4,15 +4,23 @@ AVM
 
 Changelog
 ---------
+1.6.5
+~~~~~
+
+- Session_ID wird nur noch bei Bedarf erzeugt (bleibt nach Erstellung 20min gültig und verlängert sich bei erfolgreichem Login)
+- Update auf PBKDF2 zur Absicherung der Anmeldung; MD5 als Backup
+- Methoden "_get_sid", "_get_login_infos_from_http_request", "_http_logout_request", "_check_sid", "_calculate_pbkdf2_response", "_calculate_md5_response" hinzu
+
 
 1.6.4
 ~~~~~
 
-- set attribute 'ain' as deprecated; use 'avm_ain' instead
-- clean up of possible attribute values für avm_data_type
-- clean update_black_list for updating aha_inteface
-- improve avm_data_type for r/o, w/o und r/w items
-- Streamline code on _update_x methods
+- Attribut 'ain' deprecated gesetzt; Verwendung von 'avm_ain', so dass alle avm Plugin Attribute auch mit avm_ beginnen
+- Überprüfung aller unterstützen Attributwerte avm_data_type
+- Anpassung der update_black_list
+- Verbesserung des Handling von avm_data_type für r/o, w/o und r/w Items
+- Vereinfachung des Code bei _update_x methods
+- Ergänzung weiterer Attributwerte bei avm_data_type
 
 1.6.3
 ~~~~~

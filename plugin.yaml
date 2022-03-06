@@ -12,7 +12,7 @@ plugin:
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
     support: https://knx-user-forum.de/forum/supportforen/smarthome-py/934835-avm-plugin
 
-    version: 1.6.4                 # Plugin version
+    version: 1.6.5                 # Plugin version
     sh_minversion: 1.6             # minimum shNG version to use this plugin
 #    sh_maxversion:                # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: True           # plugin supports multi instance
@@ -52,6 +52,8 @@ parameters:
         description:
             de: '(optional) Zeit zwischen zwei Updateläufen. Default ist 300 Sekunden.'
             en: '(optional) Time period between two update cycles. Default is 300 seconds.'
+        valid_min: 30
+        valid_max: 1080     # SessionID bleibt 20min gültig, daher wird die maximale Zykluszeit auf 18 min beschränkt
     ssl:
         type: bool
         default: True
@@ -76,6 +78,12 @@ parameters:
         description:
             de: '(optional) Spezielle Rufnummern ausfiltern, die vom Callmonitor ignoriert werden sollen.'
             en: '(optional) Filter only specific numbers to be watched by call monitor'
+    avm_home_automation:
+        type: bool
+        default: False
+        description:
+            de: '(optional) Aktiviert oder deaktiviert den Zugriff auf AVM Smarthome Geräte mit dem AHA HTTP Interface.'
+            en: '(optional) Activates or deactivates access to AVM smarthome devices via AHA HTTP interface'
     webif_pagelength:
         type: int
         default: 100
@@ -236,12 +244,14 @@ item_attributes:
         description:
             de: '(optional) Definition der erlaubten eingehenden Rufnummer in Items vom avm_data_type `monitor_trigger`.'
             en: '(optional) Definition of the allowed incoming number. Only in items of avm_data_type `monitor_trigger`.'
+
     avm_target_number:
         type: str
         mandatory: False
         description:
             de: '(optional) Definition der erlaubten angerufenen Rufnummer in Items vom avm_data_type `monitor_trigger`.'
             en: '(optional) Definition of the allowed called number. Only in items of avm_data_type `monitor_trigger`.'
+
     avm_wlan_index:
         type: int
         description:
@@ -249,24 +259,28 @@ item_attributes:
             en: '(optional) Definition of WiFi via index: (1: 2.4GHz, 2: 5GHz, 3: Guest)'
         valid_min: 1
         valid_max: 3
+
     avm_mac:
         type: mac
         mandatory: False
         description:
             de: 'Definition der MAC Adresse für Items vom avm_data_type `network_device`. Nur für diese Items mandatory!'
             en: 'Definition of the MAC address for items of avm_data_type `network_device`. Only mandatory for these items!'
+
     ain:
         type: str
         mandatory: False
         description:
             de: 'Definition der AktorIdentifikationsnummer (AIN) Items vom avm_data_type `aha_device`. Nur für diese Items mandatory!'
             en: 'Definition of the actor identification number (AIN) for items of avm_data_type `aha_device`. Only mandatory for these items!'
+
     avm_ain:
         type: str
         mandatory: False
         description:
             de: "Definition der AktorIdentifikationsNummer (AIN) Items vom avm_data_types für `AHA-Interface`. Nur für diese Items mandatory!"
             en: "Definition of the ActorIdentificationNumber (AIN) for items of avm_data_types `AHA-Interface`. Only mandatory for these items!"
+
     avm_tam_index:
         type: int
         mandatory: False
@@ -275,6 +289,7 @@ item_attributes:
             en: 'Index für the answering machine, normally a "1" for the first one. Supported are up to 5 answering machines.'
         valid_min: 1
         valid_max: 5
+
     avm_deflection_index:
         type: int
         mandatory: False
@@ -284,8 +299,8 @@ item_attributes:
         valid_min: 1
         valid_max: 32
         
-    avm_read_afterwrite:
-        type: num
+    avm_read_after_write:
+        type: int
         description:
             de: 'Konfiguriert eine Verzögerung in Sekunden nachdem ein Lesekommando nach einem Schreibkommando gesendet wird.'
             en: 'Configures delay in seconds to issue a read command after write command'
@@ -570,10 +585,11 @@ item_structs:
             type: num
         target_temperature:
             avm_data_type@instance: target_temperature
+            avm_read_after_write@instance: 5
             type: num
-        set_target_temperature:
-            avm_data_type@instance: set_target_temperature
-            type: num
+        # set_target_temperature:
+        #     avm_data_type@instance: set_target_temperature
+        #     type: num
         comfort_temperature:
             avm_data_type@instance: temperature_comfort
             type: num
@@ -598,15 +614,15 @@ item_structs:
         errorcode:
             avm_data_type@instance: errorcode
             type: num
-        set_window_open:
-            avm_data_type@instance: set_window_open
-            type: bool
+        # set_window_open:
+        #     avm_data_type@instance: set_window_open
+        #     type: bool
         windowopenactiveendtime:
             avm_data_type@instance: windowopenactiveendtime
             type: num
-        set_hkr_boost:
-            avm_data_type@instance: set_hkr_boost
-            type: bool
+        # set_hkr_boost:
+        #     avm_data_type@instance: set_hkr_boost
+        #     type: bool
         hkr_boost:
             avm_data_type@instance: hkr_boost
             type: bool

@@ -22,7 +22,6 @@
 #
 #########################################################################
 
-import datetime
 import hashlib  # for session id generation
 import logging
 import socket
@@ -38,7 +37,7 @@ from requests.auth import HTTPDigestAuth
 from requests.packages import urllib3
 
 from lib.model.smartplugin import SmartPlugin
-from lib.utils import Utils
+from lib.item import Items
 from .webif import WebInterface
 
 """
@@ -701,7 +700,7 @@ class AVM(SmartPlugin):
     Main class of the Plugin. Does all plugin specific stuff and provides the update functions for the different TR-064 services on the FritzDevice
     """
 
-    PLUGIN_VERSION = "1.6.4"
+    PLUGIN_VERSION = "1.6.5"
 
     _header = {'SOAPACTION': '', 'CONTENT-TYPE': 'text/xml; charset="utf-8"'}
 
@@ -735,6 +734,8 @@ class AVM(SmartPlugin):
                      ('WANDSLInterfaceConfig', 'urn:dslforum-org:service:WANDSLInterfaceConfig:1'),
                      ('MyFritz', 'urn:dslforum-org:service:X_AVM-DE_MyFritz:1')])
 
+    _login_sid_route = "/login_sid.lua?version=2"
+
     def __init__(self, sh):
         """
         Initializes the plugin. The parameters describe for this method are pulled from the entry in plugin.conf.
@@ -749,6 +750,9 @@ class AVM(SmartPlugin):
         self._lua_session = requests.Session()
         self._timeout = 10
         self._verify = self.get_parameter_value('verify')
+        self._response_cache = dict()  # Response Cache: Dictionary for storing the result of requests which is used for several different items, refreshed each update cycle. Please use distinct keys!
+        self._calllist_cache = []  #
+        self._host_info = dict()  # Dict to hold basic info of that host, gathered at startup
 
         ssl = self.get_parameter_value('ssl')
         if ssl and not self._verify:
@@ -769,14 +773,11 @@ class AVM(SmartPlugin):
 
         self._call_monitor_incoming_filter = self.get_parameter_value('call_monitor_incoming_filter')
 
+        self.aha_http_interface = self.get_parameter_value('avm_home_automation')
         self._cycle = int(self.get_parameter_value('cycle'))
         self.webif_pagelength = self.get_parameter_value('webif_pagelength')
 
-        self._response_cache = dict()  # Response Cache: Dictionary for storing the result of requests which is used for several different items, refreshed each update cycle. Please use distinct keys!
-        self._calllist_cache = []  #
-        self.host_info = dict()  # Dict to hold basic info of that host, gathered at startup
-
-        # Enable / Diable debug log generation depending on log level
+        # Enable / Disable debug log generation depending on log level
         if self.logger.isEnabledFor(logging.DEBUG):
             self.debug_log = True
         else:
@@ -787,6 +788,8 @@ class AVM(SmartPlugin):
                 f"Plugin initialized with host: {self._fritz_device.get_host()}, port: {self._fritz_device.get_port()}, ssl: {self._fritz_device.is_ssl()}, verify: {self._verify}, user: {self._fritz_device.get_user()}, call_monitor: {self._call_monitor}")
 
         self.alive = False
+        self.sid = None
+
         self.init_webinterface(WebInterface)
         # if not self.init_webinterface():
         #     self._init_complete = False
@@ -796,9 +799,18 @@ class AVM(SmartPlugin):
         Run method for the plugin
         """
 
+        # add scheduler für update_looü
         self.scheduler_add('update', self._update_loop, prio=5, cycle=self._cycle, offset=2)
-        self.alive = True
+
+        # get infos about host to be able to start methods depending on that (e.g. if Device is Fritzbox, check für AHA-Interface)
         self._get_host_device_info()
+
+        # add scheduler for checking validity of session id
+        if self.aha_http_interface:
+            self.scheduler_add('check_sid', self._check_sid, prio=5, cycle=900, offset=30)
+
+        # set plugin alive to True
+        self.alive = True
 
     def stop(self):
         """
@@ -807,7 +819,15 @@ class AVM(SmartPlugin):
 
         if self._call_monitor:
             self._monitoring_service.disconnect()
+
         self.scheduler_remove('update')
+
+        if self.aha_http_interface:
+            self.scheduler_remove('check_sid')
+
+        if self.sid:
+            self._http_logout_request()
+
         self.alive = False
 
     def _assemble_soap_data(self, action, service, argument=''):
@@ -893,19 +913,19 @@ class AVM(SmartPlugin):
             elif avm_data_type in ['deflection']:
                 self._update_deflection_status(item)
             elif avm_data_type in ['product_class']:
-                item(self.host_info['product_class'], self.get_shortname())
+                item(self._host_info['product_class'], self.get_shortname())
             elif avm_data_type in ['manufacturer']:
-                item(self.host_info['manufacturer'], self.get_shortname())
+                item(self._host_info['manufacturer'], self.get_shortname())
             elif avm_data_type in ['model']:
-                item(self.host_info['model'], self.get_shortname())
+                item(self._host_info['model'], self.get_shortname())
             elif avm_data_type in ['description']:
-                item(self.host_info['description'], self.get_shortname())
+                item(self._host_info['description'], self.get_shortname())
 
         # clean TR-064 response cache
         self._response_cache = dict()
 
-        # update internal dict holding information of aha-devices if host is fritzbox
-        if 'box' in self.host_info['product_class'].lower():
+        # update internal dict holding information of smarthome-devices queried via aha-http-interface if host is fritzbox and aha-http_interface is enabled for plugin instance
+        if self.aha_http_interface and 'box' in self._host_info['product_class'].lower():
             self._update_aha_devices()
 
         if self._call_monitor:
@@ -1152,58 +1172,138 @@ class AVM(SmartPlugin):
         if avm_data_type in (_avm_rw_attributes + _aha_wo_attributes + _aha_rw_attributes):
             return self.update_item
 
-    def _get_hash_response(self, challenge, pwd):
+    def _get_sid(self) -> str:
         """
-        Create a hash response
-        """
-
-        my_md5_hash_string = (challenge + '-' + pwd).encode('utf-16LE')
-        m = hashlib.md5()
-        m.update(my_md5_hash_string)
-        return challenge + "-" + m.hexdigest()
-
-    def _request_session_id(self):
-        """
-        Request a session id
+        Get a sid by solving the PBKDF2 (or MD5) challenge-response process.
         """
 
-        user = self._fritz_device.get_user()
-        pwd = self._fritz_device.get_password()
+        self.logger.debug(f"HTTP Login requested, getting Session-ID")
 
-        response = self._lua_session.get(self._build_url('/login_sid.lua', lua=True), verify=self._verify)
-        my_xml = response.text
+        username = self._fritz_device.get_user()
+        password = self._fritz_device.get_password()
+        url = self._build_url(self._login_sid_route, lua=True)
+
+        try:
+            response = self._request(url)
+            if self.debug_log:
+                self.logger.debug(f"Debug apriori Session request response text: {response}")
+            sid, challenge, blocktime = self._get_login_infos_from_http_request(response)
+            if self.debug_log:
+                self.logger.debug(f"Debug apriori SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
+        except Exception as ex:
+            self.logger.warning(f"failed to get challenge, error={ex}")
+            return
+
+        if challenge.startswith('2$'):
+            if self.debug_log:
+                self.logger.debug("PBKDF2 supported")
+            challenge_response = self._calculate_pbkdf2_response(challenge, password)
+        else:
+            if self.debug_log:
+                self.logger.debug("Falling back to MD5")
+            challenge_response = self._calculate_md5_response(challenge, password)
+        if blocktime > 0:
+            if self.debug_log:
+                self.logger.debug(f"Waiting for {blocktime} seconds...")
+            time.sleep(blocktime)
+
+        try:
+            if self.debug_log:
+                self.logger.debug('Sending response...')
+            params = {"username": username, "response": challenge_response}
+            response = self._request(url, params=params)
+            if self.debug_log:
+                self.logger.debug(f"Debug posterior Session request response text: {response}")
+            sid, challenge, blocktime = self._get_login_infos_from_http_request(response)
+            if self.debug_log:
+                self.logger.debug(f"Debug posterior SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
+        except Exception as ex:
+            self.logger.warning(f"failed to login, error={ex}")
+            return
+
+        if sid == "0000000000000000":
+            self.logger.warning(f"wrong username or password")
+            return
+
+        self.sid = sid
+
+    def _get_login_infos_from_http_request(self, response):
+        """
+        Get login info from http request response
+        """
+
+        xml = minidom.parseString(response)
+        sid = self._get_value_from_xml_node(xml, 'SID')
+        challenge = self._get_value_from_xml_node(xml, 'Challenge')
+        blocktime = int(self._get_value_from_xml_node(xml, 'BlockTime'))
+
         if self.debug_log:
-            self.logger.debug(f"Session request response text: {my_xml}")
-        xml = minidom.parseString(my_xml)
-        challenge_xml = xml.getElementsByTagName('Challenge')
-        sid_xml = xml.getElementsByTagName('SID')
-        my_sid = None
-        my_challenge = None
-        if len(challenge_xml) > 0:
-            my_sid = sid_xml[0].firstChild.data
-        if len(challenge_xml) > 0:
-            my_challenge = challenge_xml[0].firstChild.data
-        self.logger.debug(f"Debug apriori SID: {my_sid}, Challenge: {my_challenge}")
+            self.logger.debug(f"_get_login_infos_from_http_request: sid={sid}, challenge={challenge}, blocktime={blocktime}")
 
-        if my_sid and my_challenge:
-            hash_response = self._get_hash_response(my_challenge, pwd)
+        return sid, challenge, blocktime
 
-            # Doublecheck: Shall we send this request via self._session.get instead?
-            response = self._lua_session.get(
-                self._build_url(f'/login_sid.lua?username={user}&response={hash_response}', lua=True),
-                verify=self._verify)
-            myXML = response.text
-            xml = minidom.parseString(myXML)
-            challenge_xml = xml.getElementsByTagName('Challenge')
-            sid_xml = xml.getElementsByTagName('SID')
-            mySID = None
-            myChallenge = None
-            if len(challenge_xml) > 0:
-                mySID = sid_xml[0].firstChild.data
-            if len(challenge_xml) > 0:
-                myChallenge = challenge_xml[0].firstChild.data
-            self.logger.debug(f"Debug posterior SID: {mySID}, Challenge: {myChallenge}")
-            return mySID
+    def _http_logout_request(self):
+        """Send a logout request."""
+
+        if self.debug_log:
+            self.logger.warning(f"_http_logout_request called")
+
+        url = self._build_url(self._login_sid_route, lua=True)
+        params = {"logout": "1", "sid": self.sid}
+        response = self._request(url, params=params)
+        sid, challenge, blocktime = self._get_login_infos_from_http_request(response)
+
+        if self.debug_log:
+            self.logger.warning(f"_http_logout_request: SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
+
+        if sid == "0000000000000000":
+            self.logger.warning(f"HTTP Logout successful.")
+        self.sid = None
+
+    def _check_sid(self):
+        """Check if knows Session ID is still valid"""
+
+        if self.debug_log:
+            self.logger.warning(f"_check_sid called")
+
+        url = self._build_url(self._login_sid_route, lua=True)
+        params = {"sid": self.sid}
+        response = self._request(url, params)
+        sid, challenge, blocktime = self._get_login_infos_from_http_request(response)
+        if self.debug_log:
+            self.logger.warning(f"_check_sid: SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
+
+        if sid == "0000000000000000":
+            self.logger.warning(f"Session ID is invalid. Try to generate new one.")
+            self._get_sid()
+        else:
+            self.logger.warning(f"Session ID is still valid.")
+
+    @staticmethod
+    def _calculate_pbkdf2_response(challenge: str, password: str) -> str:
+        """ Calculate the response for a given challenge via PBKDF2 """
+        challenge_parts = challenge.split("$")
+        # Extract all necessary values encoded into the challenge
+        iter1 = int(challenge_parts[1])
+        salt1 = bytes.fromhex(challenge_parts[2])
+        iter2 = int(challenge_parts[3])
+        salt2 = bytes.fromhex(challenge_parts[4])
+        # Hash twice, once with static salt...
+        hash1 = hashlib.pbkdf2_hmac("sha256", password.encode(), salt1, iter1)
+        # Once with dynamic salt.
+        hash2 = hashlib.pbkdf2_hmac("sha256", hash1, salt2, iter2)
+        return f"{challenge_parts[4]}${hash2.hex()}"
+
+    @staticmethod
+    def _calculate_md5_response(challenge: str, password: str) -> str:
+        """ Calculate the response for a challenge using legacy MD5 """
+        response = challenge + "-" + password
+        # the legacy response needs utf_16_le encoding
+        response = response.encode("utf_16_le")
+        md5_sum = hashlib.md5()
+        md5_sum.update(response)
+        response = challenge + "-" + md5_sum.hexdigest()
+        return response
 
     def _get_lua_post_request(self, url, data, headers):
         """
@@ -1274,35 +1374,6 @@ class AVM(SmartPlugin):
         else:
             return xml
 
-    def _assemble_aha_interface(self, ain='', aha_action='', aha_param='', sid='', endtimestamp=''):
-        """
-        Builds the AVM home automation (AHA) http interface command string
-        https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AHA-HTTP-Interface.pdf
-        https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AVM_Technical_Note_-_Session_ID.pdf
-
-        :param aha_action: string of the action
-        :param aha_param: optional parameter
-        :param sid: session ID
-        :return: string of aha data
-        """
-
-        # Example request:
-        # https://fritz.box/webservices/homeautoswitch.lua?ain=099950196524&switchcmd=sethkrtsoll&param=254&sid=9c977765016899f8
-
-        aha_string = '/webservices/homeautoswitch.lua?'
-        if ain != '':
-            aha_string += f"ain={ain.replace(' ', '')}"
-        if aha_action != '':
-            aha_string += f"&switchcmd={aha_action}"
-        if aha_param != '':
-            aha_string += f"&param={aha_param}"
-        if endtimestamp != '':
-            aha_string += f"&endtimestamp={endtimestamp}"
-        if sid != '':
-            aha_string += f"&sid={sid}"
-
-        return aha_string
-
     def update_item(self, item, caller=None, source=None, dest=None):
         """
         | Write items values - in case they were changed from somewhere else than the AVM plugin (=the FritzDevice) to
@@ -1324,8 +1395,8 @@ class AVM(SmartPlugin):
             # get avm_data_type and readafterwrite
             avm_data_type = self.get_iattr_value(item.conf, 'avm_data_type')
             readafterwrite = None
-            if self.has_iattr(item.conf, 'avm_read_afterwrite'):
-                readafterwrite = int(self.get_iattr_value(item.conf, 'avm_read_afterwrite'))
+            if self.has_iattr(item.conf, 'avm_read_after_write'):
+                readafterwrite = int(self.get_iattr_value(item.conf, 'avm_read_after_write'))
                 if self.debug_log:
                     self.logger.debug(
                         f'Attempting read after write for item: {item.id()}, avm_data_type: {avm_data_type}, delay: {readafterwrite}s')
@@ -2023,7 +2094,7 @@ class AVM(SmartPlugin):
             "hw_version": self._get_value_from_xml_node(xml, "NewHardwareVersion"),
         }
 
-        self.host_info.update(host_info)
+        self._host_info.update(host_info)
 
     def reconnect(self):
         """
@@ -2146,11 +2217,13 @@ class AVM(SmartPlugin):
         :return: Array of Device Log Entries (text, type, category, timestamp, date, time)
         """
 
-        my_sid = self._request_session_id()
+        if not self.sid:
+            self._get_sid()
+        my_sid = self.sid
+
         query_string = f"/query.lua?mq_log=logger:status/log&sid={my_sid}"
         try:
-            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout,
-                                      verify=self._verify)
+            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
         except requests.exceptions.Timeout:
             self.logger.debug(f"get_device_log_from_lua: get request timed out.")
             return
@@ -2502,8 +2575,6 @@ class AVM(SmartPlugin):
 
         try:
             rsp = self._session.get(url, params=params, timeout=self._timeout, verify=self._verify)
-            if self.debug_log:
-                self.logger.debug(f"_request response is: {rsp}")
         except Exception as e:
             if self._fritz_device.is_available():
                 self.logger.error(f"Exception when sending POST request for updating item towards the FritzDevice: {e}")
@@ -2512,17 +2583,21 @@ class AVM(SmartPlugin):
             status_code = rsp.status_code
             if status_code == 200:
                 if self.debug_log:
-                    self.logger.debug("Sending AHA command successful")
+                    self.logger.debug("Sending HTTP request successful")
+            elif status_code == 403:
+                if self.debug_log:
+                    self.logger.debug("HTTP access denied. Try to get new Session ID.")
+                self._get_sid()
             else:
-                self.logger.error(f"AHA command error code: {status_code}")
+                self.logger.error(f"HTTP request error code: {status_code}")
+                rsp.raise_for_status()
                 if self.debug_log:
                     self.logger.debug(f"Url: {url}")
                     self.logger.debug(f"Params: {params}")
 
-            if not self._fritz_device.is_available():
-                self.set_device_availability(True)
+                if not self._fritz_device.is_available():
+                    self.set_device_availability(True)
 
-            rsp.raise_for_status()
             return rsp.text.strip()
 
     def _aha_request(self, cmd, ain=None, param=None, rf=str):
@@ -2532,11 +2607,16 @@ class AVM(SmartPlugin):
 
         url = f"{self._get_url_prefix()}://{self._fritz_device.get_host()}/webservices/homeautoswitch.lua"
         if self.debug_log:
-            self.logger.debug(f"built request url: {url}")
+            self.logger.debug(f"_aha_request: built request url: {url}")
+
+        if not self.sid:
+            self._get_sid()
+
+        # Es wird angenommen, dass die SID noch gültig ist. Wenn nicht, wird bei Fehler 403 eine neue generiert.
+        # Alternativ könnte man auch vor jedem Senden prüfen, dass die SID noch gültig ist.
+        mySID = self.sid
 
         try:
-            mySID = self._request_session_id()
-
             params = {"switchcmd": cmd, "sid": mySID}
             if param:
                 params.update(param)
@@ -3226,7 +3306,7 @@ class AVM(SmartPlugin):
                 else:
                     lookup_item = lookup_item.return_parent()
 
-        if not ain_device is not None:
+        if ain_device is None:
             self.logger.error('Device AIN is not defined or instance not given')
         return str(ain_device)
 
@@ -3540,9 +3620,15 @@ class AVM(SmartPlugin):
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wlanconfig_ssid':
             data = self._get_value_from_xml_node(xml, 'NewSSID')
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'wlan_guest_time_remaining':
-            element_xml = xml.getElementsByTagName('NewX_AVM-DE_TimeRemain')
-            if len(element_xml) > 0:
-                data = int(element_xml[0].firstChild.data)
+            data = self._get_value_from_xml_node(xml, 'NewX_AVM-DE_TimeRemain')
+            try:
+                data = int(data)
+            except:
+                pass
+
+            # element_xml = xml.getElementsByTagName('NewX_AVM-DE_TimeRemain')
+            # if len(element_xml) > 0:
+            #     data = int(element_xml[0].firstChild.data)
 
         if data is not None:
             item(data, self.get_shortname())
@@ -3747,9 +3833,10 @@ class AVM(SmartPlugin):
             self.logger.info(
                 f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
-    def _get_value_from_xml_node(self, node, tag_name):
+    @staticmethod
+    def _get_value_from_xml_node(node, tag_name):
         """
-        Retruns value of tag_name from given xml-node
+        Returns value of tag_name from given xml-node
         """
 
         data = None
