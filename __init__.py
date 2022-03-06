@@ -1243,7 +1243,9 @@ class AVM(SmartPlugin):
         return sid, challenge, blocktime
 
     def _http_logout_request(self):
-        """Send a logout request."""
+        """
+        Send a logout request.
+        """
 
         if self.debug_log:
             self.logger.warning(f"_http_logout_request called")
@@ -1261,7 +1263,9 @@ class AVM(SmartPlugin):
         self.sid = None
 
     def _check_sid(self):
-        """Check if knows Session ID is still valid"""
+        """
+        Check if knows Session ID is still valid
+        """
 
         if self.debug_log:
             self.logger.debug(f"_check_sid called")
@@ -1281,7 +1285,10 @@ class AVM(SmartPlugin):
 
     @staticmethod
     def _calculate_pbkdf2_response(challenge: str, password: str) -> str:
-        """ Calculate the response for a given challenge via PBKDF2 """
+        """
+        Calculate the response for a given challenge via PBKDF2
+        """
+
         challenge_parts = challenge.split("$")
         # Extract all necessary values encoded into the challenge
         iter1 = int(challenge_parts[1])
@@ -1296,7 +1303,10 @@ class AVM(SmartPlugin):
 
     @staticmethod
     def _calculate_md5_response(challenge: str, password: str) -> str:
-        """ Calculate the response for a challenge using legacy MD5 """
+        """
+        Calculate the response for a challenge using legacy MD5
+        """
+
         response = challenge + "-" + password
         # the legacy response needs utf_16_le encoding
         response = response.encode("utf_16_le")
