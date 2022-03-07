@@ -4,6 +4,24 @@ AVM
 
 Changelog
 ---------
+1.6.5
+~~~~~
+
+- Session_ID wird nur noch bei Bedarf erzeugt (bleibt nach Erstellung 20min gültig und verlängert sich bei erfolgreichem Login)
+- Update auf PBKDF2 zur Absicherung der Anmeldung; MD5 als Backup
+- Methoden "_get_sid", "_get_login_infos_from_http_request", "_http_logout_request", "_check_sid", "_calculate_pbkdf2_response", "_calculate_md5_response" hinzu
+- Bugfixing, Verbesserung der Logausgaben
+- Codevereinfachung und Korrektur
+
+1.6.4
+~~~~~
+
+- Attribut 'ain' deprecated gesetzt; Verwendung von 'avm_ain', so dass alle avm Plugin Attribute auch mit 'avm' beginnen
+- Überprüfung aller unterstützen Attributwerte avm_data_type
+- Anpassung der update_black_list
+- Verbesserung des Handling von avm_data_type für r/o, w/o und r/w Items
+- Vereinfachung des Code bei _update_x methods
+- Ergänzung weiterer Attributwerte bei avm_data_type
 
 1.6.3
 ~~~~~
@@ -15,6 +33,14 @@ Changelog
 - Beispiel für Anwendung der structs mit Instanz erstellt
 - Änderung von 'temperatur' auf 'temperature' im struct
 - Verbesserung der LogAusgabe, wenn AbfrageAttribut vorhanden aber Wert nicht vorhanden ist
+
+1.6.2
+~~~~~
+- Bugfixing der neuen Funktionen in 1.6.0
+
+1.6.1
+~~~~~
+- Bugfixing der neuen Funktionen in 1.6.0
 
 1.6.0
 ~~~~~
