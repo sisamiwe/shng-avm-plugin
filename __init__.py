@@ -799,7 +799,7 @@ class AVM(SmartPlugin):
         Run method for the plugin
         """
 
-        # add scheduler für update_looü
+        # add scheduler für update_loop
         self.scheduler_add('update', self._update_loop, prio=5, cycle=self._cycle, offset=2)
 
         # get infos about host to be able to start methods depending on that (e.g. if Device is Fritzbox, check für AHA-Interface)
@@ -835,9 +835,13 @@ class AVM(SmartPlugin):
         Builds the soap data set (from body and envelope templates for a given request.
 
         :param action: string of the action
+        :type action: str
         :param service: string of the service
-        :param argument: dictionary (name : value) of arguments
+        :type service: str
+        :param argument: dictionary (name: value) of arguments
+        :type argument: dict
         :return: string of the soap data
+        :type return: str
         """
 
         argument_string = ''
@@ -925,7 +929,7 @@ class AVM(SmartPlugin):
         self._response_cache = dict()
 
         # update internal dict holding information of smarthome-devices queried via aha-http-interface if host is fritzbox and aha-http_interface is enabled for plugin instance
-        if self.aha_http_interface and 'box' in self._host_info['product_class'].lower():
+        if self.aha_http_interface and 'box' in self._host_info['model'].lower():
             self._update_aha_devices()
 
         if self._call_monitor:
@@ -1126,7 +1130,7 @@ class AVM(SmartPlugin):
                 self.logger.warning(
                     f"Item {item.id()} with avm attribute found, but 'avm_mac' is not defined; Item will be ignored.")
 
-        # handle network_device related items (mac adress in parent items defined)
+        # handle network_device related items (mac address in parent items defined)
         elif avm_data_type in _host_child_attributes:
             avm_mac = self._get_mac(item)
             if avm_mac:
@@ -1172,7 +1176,7 @@ class AVM(SmartPlugin):
         if avm_data_type in (_avm_rw_attributes + _aha_wo_attributes + _aha_rw_attributes):
             return self.update_item
 
-    def _get_sid(self) -> str:
+    def _get_sid(self):
         """
         Get a sid by solving the PBKDF2 (or MD5) challenge-response process.
         """
@@ -1716,7 +1720,7 @@ class AVM(SmartPlugin):
                 cmd_colortemperature = int(item())
                 if self.debug_log:
                     self.logger.debug(
-                        f"set_colortemperature caller is: {caller}; colortemp to be set to: {cmd_colortemperature}")
+                        f"set_colortemperature caller is: {caller}; colortemperature to be set to: {cmd_colortemperature}")
 
                 # get AIN
                 ain_device = self._get_item_ain(item)
@@ -2146,7 +2150,7 @@ class AVM(SmartPlugin):
 
     def get_phone_name(self, index=1):
         """
-        Get the phone name at a specific index. The returend value can be used as phone_name for set_call_origin.
+        Get the phone name at a specific index. The returned value can be used as phone_name for set_call_origin.
 
         Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_voipSCPD.pdf
 
@@ -2613,6 +2617,17 @@ class AVM(SmartPlugin):
     def _aha_request(self, cmd, ain=None, param=None, rf=str):
         """
         Create an request for AHA-device get response
+
+        :param cmd:     command to be sent
+        :type cmd:      str
+        :param ain:     ain of device
+        :type ain:      str
+        :param param:   params for request
+        :type param:    dict
+        :param rf:      type of returned value
+        :type rf:       any
+        :return:        response
+        :type return:   any
         """
 
         url = f"{self._get_url_prefix()}://{self._fritz_device.get_host()}/webservices/homeautoswitch.lua"
@@ -2639,7 +2654,7 @@ class AVM(SmartPlugin):
                 self.logger.debug(f"Params were: {params}")
 
             if plain == "inval":
-                self.logger.error(f"Respone of AHA request {cmd} was invalid")
+                self.logger.error(f"Response of AHA request {cmd} was invalid")
                 return None
             else:
                 if rf == bool:
@@ -3254,13 +3269,13 @@ class AVM(SmartPlugin):
         """
         Set HKR to boost mode.
         """
-        self._aha_request("sethkrboost", ain=ain, param={endtimestamp})
+        self._aha_request("sethkrboost", ain=ain, param={'endtimestamp': endtimestamp})
 
     def set_hkr_windowopen(self, ain, endtimestamp):
         """
         Set HKR windowopen.
         """
-        self._aha_request("sethkrwindowopen", ain=ain, param={endtimestamp})
+        self._aha_request("sethkrwindowopen", ain=ain, param={'endtimestamp': endtimestamp})
 
     def set_name(self, ain, name):
         """
@@ -3633,7 +3648,7 @@ class AVM(SmartPlugin):
             data = self._get_value_from_xml_node(xml, 'NewX_AVM-DE_TimeRemain')
             try:
                 data = int(data)
-            except:
+            except Exception:
                 pass
 
             # element_xml = xml.getElementsByTagName('NewX_AVM-DE_TimeRemain')
