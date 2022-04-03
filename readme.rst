@@ -4,6 +4,17 @@ AVM
 
 Changelog
 ---------
+
+1.6.7
+~~~~~
+- correction on structs
+
+1.6.6
+~~~~~
+
+- small bugfixing
+- Smarthome light color command added
+
 1.6.5
 ~~~~~
 

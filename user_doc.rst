@@ -4,6 +4,12 @@ AVM
 
 Changelog
 ---------
+1.6.6
+~~~~~
+
+- Methode get_color_defaults implementiert, welche die aktuell von AVM unterstützen diskreten RGB Farben ausliest. 
+- Methode set_color und color auf diskrete RGB farben umgestellt. Beliebige RGB Farbwerte werden erst ab Q2 2022 von AVM unterstützt.
+
 1.6.5
 ~~~~~
 
@@ -12,6 +18,8 @@ Changelog
 - Methoden "_get_sid", "_get_login_infos_from_http_request", "_http_logout_request", "_check_sid", "_calculate_pbkdf2_response", "_calculate_md5_response" hinzu
 - Bugfixing, Verbesserung der Logausgaben
 - Codevereinfachung und Korrektur
+- Plugin Parameter für WebIF Page Length hinzu
+- Plugin Parameter für Aktivierung der Nutzung des AHA-HTTP Interfaces hinzu
 
 1.6.4
 ~~~~~
