@@ -7,7 +7,13 @@ Changelog
 
 1.6.7
 ~~~~~
-- correction on structs
+- correct typo "temperatur" in struct
+
+1.6.6
+~~~~~
+
+- Methode get_color_defaults implementiert, welche die aktuell von AVM unterstützen diskreten RGB Farben ausliest.
+- Methode set_color und color auf diskrete RGB farben umgestellt. Beliebige RGB Farbwerte werden erst ab Q2 2022 von AVM unterstützt.
 
 1.6.6
 ~~~~~

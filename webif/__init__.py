@@ -72,7 +72,13 @@ class WebInterface(SmartPluginWebIf):
             self.call_monitor_items.extend(self.plugin._monitoring_service.get_items_incoming())
             self.call_monitor_items.extend(self.plugin._monitoring_service.get_items_outgoing())
 
+        try:
+            pagelength = self.plugin.webif_pagelength
+        except Exception:
+            pagelength = 100
+
         tmpl = self.tplenv.get_template('index.html')
+
         return tmpl.render(plugin_shortname=self.plugin.get_shortname(),
                            plugin_version=self.plugin.get_version(),
                            plugin_info=self.plugin.get_info(),
@@ -83,7 +89,7 @@ class WebInterface(SmartPluginWebIf):
                            smarthome_items=sorted(self.plugin.get_fritz_device().get_smarthome_items(), key=lambda k: str.lower(k['_path'])),
                            smarthome_item_count=len(self.plugin.get_fritz_device().get_smarthome_items()),
                            p=self.plugin,
-                           webif_pagelength=self.plugin.webif_pagelength,
+                           webif_pagelength=pagelength,
                            )
 
     @cherrypy.expose

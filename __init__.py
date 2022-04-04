@@ -2122,7 +2122,6 @@ class AVM(SmartPlugin):
 
         self._host_info.update(host_info)
 
-
     def _get_colordefaults(self, ain):
         """
         Get the DOM elements for the RGM default colors using minidom.
@@ -2137,7 +2136,6 @@ class AVM(SmartPlugin):
             except Exception as e:
                 self.logger.error(f'_get_colordefaults: error {e} during parsing. Plain={plain}')
         return colors
-
 
     def reconnect(self):
         """
@@ -2297,8 +2295,42 @@ class AVM(SmartPlugin):
 
             return newlog
         except JSONDecodeError:
-            self.logger.error('get_device_log_from_web: SID seems invalid.Please try again.')
-        return
+            self.logger.error('get_device_log_from_lua: SID seems invalid. Please try again.')
+
+    def get_device_log_from_lua_separated(self):
+        """
+        Gets the Device Log from the LUA HTTP Interface via LUA Scripts (more complete than the get_device_log TR-064 version).
+
+        :return: list of device logs list (date, time, log, type, category)
+        """
+
+        if not self.sid:
+            self._get_sid()
+        my_sid = self.sid
+
+        query_string = f"/query.lua?mq_log=logger:status/log_separate&sid={my_sid}"
+        try:
+            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
+        except requests.exceptions.Timeout:
+            self.logger.debug(f"get_device_log_from_lua_separated: get request timed out.")
+            return
+        except Exception as e:
+            self.logger.debug(f"get_device_log_from_lua_separated: Error {e} occurred.")
+            return
+
+        status_code = r.status_code
+        if status_code == 200:
+            if self.debug_log:
+                self.logger.debug("get_device_log_from_lua_separated: Sending query.lua command successful")
+        else:
+            self.logger.error(f"get_device_log_from_lua_separated: query.lua command error code: {status_code}")
+            return
+
+        try:
+            data = r.json()['mq_log']
+            return data
+        except JSONDecodeError:
+            self.logger.error('get_device_log_from_lua_separated: SID seems invalid. Please try again.')
 
     def get_device_log_from_tr064(self):
         """
@@ -3052,7 +3084,7 @@ class AVM(SmartPlugin):
                                 self._fritz_device.get_smarthome_devices()[ain]['colortemperature'] = 0
                                 pass
         else:
-            self.logger.warning(f"Debug: _get_aha_device_elements returned no devices")
+            self.logger.debug(f"Debug: _get_aha_device_elements returned no devices")
 
         # update items
         self._update_smarthome_items()
@@ -3278,7 +3310,6 @@ class AVM(SmartPlugin):
             return self._aha_request("setcolor", ain=ain, param={'hue': 358, 'saturation': 180, 'duration': int(duration)}, rf=bool)
         else:
             self.logger.error(f'setcolor hue out of range (hue={hue})')
-
 
     def get_temperature(self, ain):
         """
