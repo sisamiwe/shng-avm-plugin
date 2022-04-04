@@ -7,7 +7,7 @@ Changelog
 
 1.6.7
 ~~~~~
-- correct typo "temperatur" in struct
+- correct typo "temperatur" to "temperature" in struct
 - add method "get_device_log_from_lua_separated" to get log already as list of list
 - limit Log entries shown on WebIF to recent 200
 - Update WebIF with possibility to adapt table size to screen
@@ -17,12 +17,6 @@ Changelog
 
 - Methode get_color_defaults implementiert, welche die aktuell von AVM unterstützen diskreten RGB Farben ausliest.
 - Methode set_color und color auf diskrete RGB farben umgestellt. Beliebige RGB Farbwerte werden erst ab Q2 2022 von AVM unterstützt.
-
-1.6.6
-~~~~~
-
-- small bugfixing
-- Smarthome light color command added
 
 1.6.5
 ~~~~~

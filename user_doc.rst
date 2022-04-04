@@ -4,9 +4,10 @@ AVM
 
 Changelog
 ---------
+
 1.6.7
 ~~~~~
-- correct typo "temperatur" in struct
+- correct typo "temperatur" to "temperature" in struct
 - add method "get_device_log_from_lua_separated" to get log already as list of list
 - limit Log entries shown on WebIF to recent 200
 - Update WebIF with possibility to adapt table size to screen

@@ -111,6 +111,8 @@ class WebInterface(SmartPluginWebIf):
                     for item in self.call_monitor_items:
                         data['call_monitor'][item.id()] = {}
                         data['call_monitor'][item.id()]['value'] = item()
+                        data['call_monitor'][item.id()]['last_update'] = item.property.last_update.strftime('%d.%m.%Y %H:%M:%S')
+                        data['call_monitor'][item.id()]['last_change'] = item.property.last_change.strftime('%d.%m.%Y %H:%M:%S')
 
             if self.plugin.get_fritz_device().get_items():
                 data['avm_items'] = {}

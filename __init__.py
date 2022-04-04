@@ -774,6 +774,7 @@ class AVM(SmartPlugin):
         self._call_monitor_incoming_filter = self.get_parameter_value('call_monitor_incoming_filter')
 
         self.aha_http_interface = self.get_parameter_value('avm_home_automation')
+        self.log_entries = self.get_parameter_value('log_entries')
         self._cycle = int(self.get_parameter_value('cycle'))
         self.webif_pagelength = self.get_parameter_value('webif_pagelength')
 
@@ -2327,7 +2328,7 @@ class AVM(SmartPlugin):
             return
 
         try:
-            data = r.json()['mq_log']
+            data = r.json()['mq_log'][:self.log_entries]
             return data
         except JSONDecodeError:
             self.logger.error('get_device_log_from_lua_separated: SID seems invalid. Please try again.')
