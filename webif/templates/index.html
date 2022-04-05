@@ -29,6 +29,7 @@
   }
   #smarthome_devicetable {
     display: none;
+    table-layout: fixed;
   } 
   #logtable {
     display: none;
@@ -288,11 +289,11 @@
     <table id="logtable" class="table table-striped table-hover pluginList dataTableAdditional">
         <thead>
             <tr>
-                <th class="type">{{ _('Datum')}}</th>
-                <th class="type">{{ _('Uhrzeit')}}</th>
-                <th class="meldung">{{ _('Meldung')}}</th>
-                <th class="type">{{ _('Typ')}}</th>
-                <th class="type">{{ _('Kategory')}}</th>
+                <th style="width:100px">{{ _('Datum')}}</th>
+                <th style="width:100px">{{ _('Uhrzeit')}}</th>
+                <th>{{ _('Meldung')}}</th>
+                <th style="width:100px">{{ _('Typ')}}</th>
+                <th style="width:100px">{{ _('Kategorie')}}</th>
             </tr>
         </thead>
         <tbody>
