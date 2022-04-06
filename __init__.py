@@ -933,7 +933,7 @@ class AVM(SmartPlugin):
         self._response_cache = dict()
 
         # update internal dict holding information of smarthome-devices queried via aha-http-interface if host is fritzbox and aha-http_interface is enabled for plugin instance
-        if self.aha_http_interface and 'box' in self._host_info['model'].lower():
+        if self.aha_http_interface and self.is_fritzbox:
             self._update_aha_devices()
 
         if self._call_monitor:
@@ -1267,7 +1267,7 @@ class AVM(SmartPlugin):
             self.logger.warning(f"_http_logout_request: SID: {sid}, Challenge: {challenge}, BlockTime: {blocktime}")
 
         if sid == "0000000000000000":
-            self.logger.warning(f"HTTP Logout successful.")
+            self.logger.debug(f"HTTP Logout successful.")
         self.sid = None
 
     def _check_sid(self):
@@ -4173,3 +4173,7 @@ class AVM(SmartPlugin):
 
         # read deflection after setting
         self._update_loop()
+
+    @property
+    def is_fritzbox(self):
+        return True if 'box' in self._host_info['model'].lower() else False
