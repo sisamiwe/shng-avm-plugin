@@ -19,7 +19,7 @@
   table th.value {
     width: 250px;
   }
-  table th.meldung {
+  table th.logentry {
     max-width: 450px;
   }
 </style>
@@ -56,6 +56,7 @@
         pageResize: resize } );
       table2 = $('#logtable').DataTable( {
         pageLength: webif_pagelength,
+        columnDefs: [{ 'targets': [2], 'className': 'truncate logentry'}].concat($.fn.dataTable.defaults.columnDefs),
         order: [[ 0, 'desc' ]],
         pageResize: resize } );
       table3 = $('#call_monitortable').DataTable( {
@@ -198,6 +199,7 @@
             {% endfor %}
         </tbody>
     </table>
+    {{ p.sid }}
 </div>
 {% endblock %}
 
@@ -278,15 +280,13 @@
             <tr>
                 <th class="type">{{ 'Datum' }}</th>
                 <th class="type">{{ 'Uhrzeit' }}</th>
-                <th class="meldung">{{ 'Meldung' }}</th>
+                <th>{{ 'Meldung' }}</th>
                 <th class="type2">{{ 'Typ' }}</th>
                 <th class="type">{{ 'Kategorie' }}</th>
             </tr>
         </thead>
         <tbody>
-            {% if p.sid %}
-                {% set logentries = p.get_device_log_from_lua_separated() %}
-            {% endif %}
+            {% set logentries = p.get_device_log_from_lua_separated() %}
             {% if logentries %}
                 {% for logentry in logentries%}
                     <tr>

@@ -735,6 +735,9 @@ class AVM(SmartPlugin):
                      ('MyFritz', 'urn:dslforum-org:service:X_AVM-DE_MyFritz:1')])
 
     _login_sid_route = "/login_sid.lua?version=2"
+    _log_route = '/query.lua?mq_log=logger:status/log'
+    _log_separate_route = '/query.lua?mq_log=logger:status/log_separate'
+    _homeauto_route = '/webservices/homeautoswitch.lua'
 
     def __init__(self, sh):
         """
@@ -2261,11 +2264,12 @@ class AVM(SmartPlugin):
 
         if not self.sid:
             self._get_sid()
-        my_sid = self.sid
 
-        query_string = f"/query.lua?mq_log=logger:status/log&sid={my_sid}"
+        url = self._build_url(self._log_route, lua=True)
+        params = {"sid": self.sid}
+
         try:
-            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
+            r = self._lua_session.get(url, params=params, timeout=self._timeout, verify=self._verify)
         except requests.exceptions.Timeout:
             self.logger.debug(f"get_device_log_from_lua: get request timed out.")
             return
@@ -2309,11 +2313,12 @@ class AVM(SmartPlugin):
 
         if not self.sid:
             self._get_sid()
-        my_sid = self.sid
 
-        query_string = f"/query.lua?mq_log=logger:status/log_separate&sid={my_sid}"
+        url = self._build_url(self._log_separate_route, lua=True)
+        params = {"sid": self.sid}
+
         try:
-            r = self._lua_session.get(self._build_url(query_string, lua=True), timeout=self._timeout, verify=self._verify)
+            r = self._lua_session.get(url, params=params, timeout=self._timeout, verify=self._verify)
         except requests.exceptions.Timeout:
             self.logger.debug(f"get_device_log_from_lua_separated: get request timed out.")
             return
@@ -2695,9 +2700,7 @@ class AVM(SmartPlugin):
         :type return:   any
         """
 
-        url = f"{self._get_url_prefix()}://{self._fritz_device.get_host()}/webservices/homeautoswitch.lua"
-        if self.debug_log:
-            self.logger.debug(f"_aha_request: built request url: {url}")
+        url = self._build_url(self._homeauto_route, lua=True)
 
         if not self.sid:
             self._get_sid()
