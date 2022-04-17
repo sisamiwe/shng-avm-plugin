@@ -2699,6 +2699,10 @@ class AVM(SmartPlugin):
         :return:        response
         :type return:   any
         """
+        
+        if not self.aha_http_interface:
+            self.logger.warning(f"Smarthome Interface not enabled. Therefore command {cmd} will not be executed.")
+            return
 
         url = self._build_url(self._homeauto_route, lua=True)
 
@@ -2772,6 +2776,7 @@ class AVM(SmartPlugin):
                 # get functions of AVM smarthome device
                 functions = []
                 functionbitmask = int(element.getAttribute('functionbitmask'))
+                self.logger.debug(f"functionbitmask={functionbitmask}")
                 functions.append('light') if bool(functionbitmask & (1 << 2) > 0) is True else None
                 functions.append('alarm') if bool(functionbitmask & (1 << 4) > 0) is True else None
                 functions.append('button') if bool(functionbitmask & (1 << 5) > 0) is True else None
@@ -4124,7 +4129,7 @@ class AVM(SmartPlugin):
         """
 
         result = self.get_deflections()
-        if result is not None and dict:
+        if isinstance(result, dict) and result:
             if self.get_iattr_value(item.conf, 'avm_data_type') == 'deflections_details':
                 item(result, self.get_shortname())
             else:
@@ -4134,24 +4139,26 @@ class AVM(SmartPlugin):
                 # Set Item values
                 if deflection_index is not None:
                     if self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_enable':
-                        item(result[deflection_index]['Enable'], self.get_shortname())
+                        item(result[deflection_index].get('Enable', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_type':
-                        item(result[deflection_index]['Type'], self.get_shortname())
+                        item(result[deflection_index].get('Type', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_number':
-                        item(result[deflection_index]['Number'], self.get_shortname())
+                        item(result[deflection_index].get('Number', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_to_number':
-                        item(result[deflection_index]['DeflectionToNumber'], self.get_shortname())
+                        item(result[deflection_index].get('DeflectionToNumber', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_mode':
-                        item(result[deflection_index]['Mode'], self.get_shortname())
+                        item(result[deflection_index].get('Mode', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_outgoing':
-                        item(result[deflection_index]['Outgoing'], self.get_shortname())
+                        item(result[deflection_index].get('Outgoing', None), self.get_shortname())
                     elif self.get_iattr_value(item.conf, 'avm_data_type') == 'deflection_phonebook_id':
-                        item(result[deflection_index]['PhonebookID'], self.get_shortname())
+                        item(result[deflection_index].get('PhonebookID', None), self.get_shortname())
                     else:
                         self.logger.error(
                             f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
                 else:
                     self.logger.error(f"Deflection Index for {item} not defined")
+        else:
+            self.logger.info(f"Deflection configured in AVM Plugin/Items but probably not set in Fritzbox.")
 
     def set_deflection(self, deflection_id=0, new_enable=False):
         """
