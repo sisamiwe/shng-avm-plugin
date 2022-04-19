@@ -98,15 +98,35 @@
 </script>
 {% endblock pluginscripts %}
 
+
+<!-- Define tabcount, tabtitle and if tab should be hidden -->
 {% set tabcount = 6 %}
 
 {% set tab1title = _("<strong>"'AVM Items'"</strong> (" ~ avm_item_count ~ ") ") %}
-{% set tab2title = _("<strong>"'AVM Smarthome Items'"</strong> (" ~ smarthome_item_count ~ ") ") %}
-{% set tab3title = _("<strong>"'Plugin-API'"</strong>") %}
-{% set tab4title = _("<strong>"'Log-Einträge'"</strong>") %}
-{% set tab5title = _("<strong>"'Call Monitor Items'"</strong> (" ~ call_monitor_item_count ~ ") ") %}
-{% set tab6title = _("<strong>"'AVM Smarthome Devices'"</strong>") %}
 
+{% if p.aha_http_interface and smarthome_item_count > 0 %} 
+    {% set tab2title = _("<strong>"'AVM Smarthome Items'"</strong> (" ~ smarthome_item_count ~ ") ") %}
+{% else %}
+    {% set tab2title = "hidden" %} 
+{% endif %}
+
+{% set tab3title = _("<strong>"'Plugin-API'"</strong>") %}
+
+{% set tab4title = _("<strong>"'Log-Einträge'"</strong>") %}
+
+{% if p._call_monitor and call_monitor_item_count > 0 %} 
+    {% set tab5title = _("<strong>"'Call Monitor Items'"</strong> (" ~ call_monitor_item_count ~ ") ") %}
+{% else %}
+    {% set tab5title = "hidden" %} 
+{% endif %}
+
+{% if p.aha_http_interface %} 
+    {% set tab6title = _("<strong>"'AVM Smarthome Devices'"</strong>") %}
+{% else %}
+    {% set tab2title = "hidden" %} 
+{% endif %}
+
+<!-- Define language -->
 {% set language = p.get_sh().get_defaultlanguage() %}
 {% if language not in ['en','de'] %}
     {% set language = 'en' %}
@@ -160,7 +180,7 @@
 </table>
 {% endblock %}
 
-
+<!-- Define Content -->
 {% block buttons %}
     <button type="button" class="btn btn-shng btn-sm" onclick="if (confirm('{{ _('Wollen Sie das Gerät wirklich neu starten?') }}')) { jQuery.get('reboot'); }">{{ _('Reboot') }}</button>
     <button type="button" class="btn btn-shng btn-sm" onclick="if (confirm('{{ _('Wollen Sie die Internetverbindung wirklich neu aufbauen?') }}')) { jQuery.get('reconnect'); }">{{ _('Reconnect WAN') }}</button>
