@@ -110,21 +110,22 @@
     {% set tab2title = "hidden" %} 
 {% endif %}
 
-{% set tab3title = _("<strong>"'Plugin-API'"</strong>") %}
-
-{% set tab4title = _("<strong>"'Log-Einträge'"</strong>") %}
+{% if p.aha_http_interface %} 
+    {% set tab3title = _("<strong>"'AVM Smarthome Devices'"</strong> (" ~ len(p._fritz_device._smarthome_devices) ~ ") ") %}
+{% else %}
+    {% set tab3title = "hidden" %} 
+{% endif %}
 
 {% if p._call_monitor and call_monitor_item_count > 0 %} 
-    {% set tab5title = _("<strong>"'Call Monitor Items'"</strong> (" ~ call_monitor_item_count ~ ") ") %}
+    {% set tab4title = _("<strong>"'Call Monitor Items'"</strong> (" ~ call_monitor_item_count ~ ") ") %}
 {% else %}
-    {% set tab5title = "hidden" %} 
+    {% set tab4title = "hidden" %} 
 {% endif %}
 
-{% if p.aha_http_interface %} 
-    {% set tab6title = _("<strong>"'AVM Smarthome Devices'"</strong>") %}
-{% else %}
-    {% set tab2title = "hidden" %} 
-{% endif %}
+{% set tab5title = _("<strong>"'Log-Einträge'"</strong>") %}
+
+{% set tab6title = _("<strong>"'Plugin-API'"</strong>") %}
+
 
 <!-- Define language -->
 {% set language = p.get_sh().get_defaultlanguage() %}
@@ -180,12 +181,12 @@
 </table>
 {% endblock %}
 
+
 <!-- Define Content -->
 {% block buttons %}
     <button type="button" class="btn btn-shng btn-sm" onclick="if (confirm('{{ _('Wollen Sie das Gerät wirklich neu starten?') }}')) { jQuery.get('reboot'); }">{{ _('Reboot') }}</button>
     <button type="button" class="btn btn-shng btn-sm" onclick="if (confirm('{{ _('Wollen Sie die Internetverbindung wirklich neu aufbauen?') }}')) { jQuery.get('reconnect'); }">{{ _('Reconnect WAN') }}</button>
 {% endblock buttons %}
-
 
 {% block bodytab1 %}
 <div class="container-fluid m-2 table-resize">
@@ -222,7 +223,6 @@
 </div>
 {% endblock %}
 
-
 {% block bodytab2 %}
 <div class="container-fluid m-2 table-resize">
     <table id="smarthomeitemtable" class="table table-striped table-hover pluginList dataTableAdditional">
@@ -258,76 +258,32 @@
 </div>
 {% endblock %}
 
-
 {% block bodytab3 %}
+{% if p._fritz_device._smarthome_devices %}
 <div class="container-fluid m-2 table-resize">
-    {%  for function, dict in p.metadata.plugin_functions.items() %}
-        <div class="card mb-2">
-          <div class="card-header p-2">
-              <strong>{{ dict['type'] }} {{ function }}({% if dict['parameters'] is not none %}{%  for name, paramdict in dict['parameters'].items() %}{% if loop.index > 1 %}, {% endif %}{{  name }}: {{ paramdict['type'] }}{% endfor %}{% endif %})</strong>
-          </div>
-          <div class="card-body p-2">
-              {{ dict['description'][language] }}<br/>
-              {% if dict['parameters'] is not none %}
-                  <div class="card mt-2">
-                      <div class="card-header p-2">
-                        <strong>{{ _('Parameter') }}:</strong>
-                      </div>
-                      <div class="card-body p-2">
-                          <ul class="list-group">
-                          {%  for name, paramdict in dict['parameters'].items() %}
-                            <li class="list-group-item p-2">
-                                <strong>{{  name }}: {{ paramdict['type'] }}</strong><br/>
-                            {{ paramdict['description'][language] }}
-                            </li>
-                          {% endfor %}
-                          </ul>
-                      </div>
-                  </div>
-              {% endif %}
-          </div>
-        </div>
-    {% endfor %}
-</div>
-{% endblock %}
-
-
-{% block bodytab4 %}
-<div class="container-fluid m-2 table-resize">
-    <table id="logtable" class="table table-striped table-hover pluginList dataTableAdditional">
+    <table id="smarthome_devicetable" class="table table-striped table-hover pluginList dataTableAdditional">
         <thead>
             <tr>
-                <th class="type">{{ 'Datum' }}</th>
-                <th class="type">{{ 'Uhrzeit' }}</th>
-                <th>{{ 'Meldung' }}</th>
-                <th class="type2" style="text-align: center">{{ 'Typ' }}</th>
-                <th class="type">{{ 'Kategorie' }}</th>
+                <th class="type2">{{ 'No' }}</th>
+                <th class="type">{{ 'Device AIN' }}</th>
+                <th>{{ 'Device Details (dict)' }}</th>
             </tr>
         </thead>
         <tbody>
-            {% set logentries = p.get_device_log_from_lua_separated() %}
-            {% if logentries %}
-                {% for logentry in logentries%}
-                    <tr>
-                        <td class="py-1">{{ logentry[0] }}</td>
-                        <td class="py-1">{{ logentry[1] }}</td>
-                        <td class="py-1">{{ logentry[2] }}</td>
-                        <td class="py-1" style="text-align: center">
-                            <a class="text-shng" target="_blank" href="https://service.avm.de/help/de/FRITZ-Box-7590/019/hilfe_syslog_{{ logentry[3] }}">
-                                {{ logentry[3] }}
-                            </a>
-                        </td>
-                        <td class="py-1">{{ _('cat_'+logentry[4]|string) }}</td>
-                    </tr>
-                {% endfor %}
-            {% endif %}
+            {% for ain in p._fritz_device._smarthome_devices %}
+                <tr>
+                    <td class="py-1">{{ loop.index }}</td>
+                    <td class="py-1">{{ ain }}</td>
+                    <td class="py-1">{{ p._fritz_device._smarthome_devices[ain] }}</td>
+                </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
+{% endif %}
 {% endblock %}
 
-
-{% block bodytab5 %}
+{% block bodytab4 %}
 <div class="container-fluid m-2 table-resize">
     <table id="call_monitortable" class="table table-striped table-hover pluginList dataTableAdditional">
         <thead>
@@ -364,28 +320,68 @@
 </div>
 {% endblock %}
 
-
-{% block bodytab6 %}
-{% if p._fritz_device._smarthome_devices %}
+{% block bodytab5 %}
 <div class="container-fluid m-2 table-resize">
-    <table id="smarthome_devicetable" class="table table-striped table-hover pluginList dataTableAdditional">
+    <table id="logtable" class="table table-striped table-hover pluginList dataTableAdditional">
         <thead>
             <tr>
-                <th class="type2">{{ 'No' }}</th>
-                <th class="type">{{ 'Device AIN' }}</th>
-                <th>{{ 'Device Details (dict)' }}</th>
+                <th class="type">{{ 'Datum' }}</th>
+                <th class="type">{{ 'Uhrzeit' }}</th>
+                <th>{{ 'Meldung' }}</th>
+                <th class="type2" style="text-align: center">{{ 'Typ' }}</th>
+                <th class="type">{{ 'Kategorie' }}</th>
             </tr>
         </thead>
         <tbody>
-            {% for ain in p._fritz_device._smarthome_devices %}
-                <tr>
-                    <td class="py-1">{{ loop.index }}</td>
-                    <td class="py-1">{{ ain }}</td>
-                    <td class="py-1">{{ p._fritz_device._smarthome_devices[ain] }}</td>
-                </tr>
-            {% endfor %}
+            {% set logentries = p.get_device_log_from_lua_separated() %}
+            {% if logentries %}
+                {% for logentry in logentries%}
+                    <tr>
+                        <td class="py-1">{{ logentry[0] }}</td>
+                        <td class="py-1">{{ logentry[1] }}</td>
+                        <td class="py-1">{{ logentry[2] }}</td>
+                        <td class="py-1" style="text-align: center">
+                            <a class="text-shng" target="_blank" href="https://service.avm.de/help/de/FRITZ-Box-7590/019/hilfe_syslog_{{ logentry[3] }}">
+                                {{ logentry[3] }}
+                            </a>
+                        </td>
+                        <td class="py-1">{{ _('cat_'+logentry[4]|string) }}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 </div>
-{% endif %}
+{% endblock %}
+
+{% block bodytab6 %}
+<div class="container-fluid m-2 table-resize">
+    {%  for function, dict in p.metadata.plugin_functions.items() %}
+        <div class="card mb-2">
+          <div class="card-header p-2">
+              <strong>{{ dict['type'] }} {{ function }}({% if dict['parameters'] is not none %}{%  for name, paramdict in dict['parameters'].items() %}{% if loop.index > 1 %}, {% endif %}{{  name }}: {{ paramdict['type'] }}{% endfor %}{% endif %})</strong>
+          </div>
+          <div class="card-body p-2">
+              {{ dict['description'][language] }}<br/>
+              {% if dict['parameters'] is not none %}
+                  <div class="card mt-2">
+                      <div class="card-header p-2">
+                        <strong>{{ _('Parameter') }}:</strong>
+                      </div>
+                      <div class="card-body p-2">
+                          <ul class="list-group">
+                          {%  for name, paramdict in dict['parameters'].items() %}
+                            <li class="list-group-item p-2">
+                                <strong>{{  name }}: {{ paramdict['type'] }}</strong><br/>
+                            {{ paramdict['description'][language] }}
+                            </li>
+                          {% endfor %}
+                          </ul>
+                      </div>
+                  </div>
+              {% endif %}
+          </div>
+        </div>
+    {% endfor %}
+</div>
 {% endblock %}
