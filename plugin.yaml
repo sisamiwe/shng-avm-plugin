@@ -89,7 +89,7 @@ parameters:
         default: 200
         description:
             de: '(optional) Anzahl der Log-Messages, die verarbeitet/bereitgestellt werden. 0 = alle'
-            en: '(optional) Amount of Log-Messages, witch will be displayed. 0 = all'
+            en: '(optional) Number of Log-Messages, which will be displayed. 0 = all'
     webif_pagelength:
         type: int
         default: 0
@@ -102,7 +102,7 @@ parameters:
         description:
             de: 'Anzahl an Items, die standardmäßig in einer Web Interface Tabelle pro Seite angezeigt werden.
                  0 = automatisch, -1 = alle'
-            en: 'Amount of items being listed in a web interface table per page by default.
+            en: 'Number of items being listed in a web interface table per page by default.
                  0 = automatic, -1 = all'
         description_long:
             de: 'Anzahl an Items, die standardmäßig in einer Web Interface Tabelle pro Seite angezeigt werden.\n
