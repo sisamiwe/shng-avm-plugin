@@ -1118,31 +1118,26 @@ class AVM(SmartPlugin):
         elif avm_data_type in (_aha_attributes + _aha_attributes_old):
             if self._get_item_ain(item) is not None:
                 if self.debug_log:
-                    self.logger.debug(
-                        f"Item {item.id()} with avm smarthome attribute and defined AIN found; append to list.")
+                    self.logger.debug(f"Item {item.id()} with avm smarthome attribute and defined AIN found; append to list.")
                 self._fritz_device.get_smarthome_items().append(item)
             else:
-                self.logger.warning(
-                    f"Item {item.id()} with avm smarthome attribute found, but AIN is not defined; Item will be ignored.")
+                self.logger.warning(f"Item {item.id()} with avm smarthome attribute found, but AIN is not defined; Item will be ignored.")
 
         # handle network_device related items
         elif avm_data_type in _host_attribute:
             if self.has_iattr(item.conf, 'avm_mac'):
                 if self.debug_log:
-                    self.logger.debug(
-                        f"Item {item.id()} with avm attribute 'network_device' and defined 'avm_mac' found; append to list.")
+                    self.logger.debug(f"Item {item.id()} with avm attribute 'network_device' and defined 'avm_mac' found; append to list.")
                 self._fritz_device.get_items().append(item)
             else:
-                self.logger.warning(
-                    f"Item {item.id()} with avm attribute found, but 'avm_mac' is not defined; Item will be ignored.")
+                self.logger.warning(f"Item {item.id()} with avm attribute found, but 'avm_mac' is not defined; Item will be ignored.")
 
         # handle network_device related items (mac address in parent items defined)
         elif avm_data_type in _host_child_attributes:
             avm_mac = self._get_mac(item)
             if avm_mac:
                 if self.debug_log:
-                    self.logger.debug(
-                        f"Item {item.id()} with avm device attribute and defined 'avm_mac' found; append to list.")
+                    self.logger.debug(f"Item {item.id()} with avm device attribute and defined 'avm_mac' found; append to list.")
                 self._fritz_device.get_items().append(item)
             else:
                 self.logger.warning(
@@ -1153,24 +1148,20 @@ class AVM(SmartPlugin):
             avm_wlan_index = self._get_wlan_index(item)
             if avm_wlan_index is not None:
                 if self.debug_log:
-                    self.logger.debug(
-                        f"Item {item.id()} with avm device attribute and defined 'avm_wlan_index' found; append to list.")
+                    self.logger.debug(f"Item {item.id()} with avm device attribute and defined 'avm_wlan_index' found; append to list.")
                 self._fritz_device.get_items().append(item)
             else:
-                self.logger.warning(
-                    f"Item {item.id()} with avm attribute found, but 'avm_wlan_index' is not defined; Item will be ignored.")
+                self.logger.warning(f"Item {item.id()} with avm attribute found, but 'avm_wlan_index' is not defined; Item will be ignored.")
 
         # handle tam related items
         elif avm_data_type in _tam_attributes:
             avm_tam_index = self._get_tam_index(item)
             if avm_tam_index is not None:
                 if self.debug_log:
-                    self.logger.debug(
-                        f"Item {item.id()} with avm device attribute and defined 'avm_tam_index' found; append to list.")
+                    self.logger.debug(f"Item {item.id()} with avm device attribute and defined 'avm_tam_index' found; append to list.")
                 self._fritz_device.get_items().append(item)
             else:
-                self.logger.warning(
-                    f"Item {item.id()} with avm attribute found, but 'avm_tam_index' is not defined; Item will be ignored.")
+                self.logger.warning(f"Item {item.id()} with avm attribute found, but 'avm_tam_index' is not defined; Item will be ignored.")
 
         # handle remaining items not needing further attribute
         elif self.has_iattr(item.conf, 'avm_data_type'):
@@ -1473,7 +1464,7 @@ class AVM(SmartPlugin):
                 if not deflection_index or deflection_index <= 0:
                     self.logger.error('Parameter <avm_deflection_index> for item not defined in item.conf')
                 else:
-                    self.set_deflection(deflection_index, bool(item()))
+                    self.set_deflection(deflection_index - 1, bool(item()))
 
                 # read new value after writing
                 if readafterwrite:
@@ -1781,8 +1772,7 @@ class AVM(SmartPlugin):
         headers = self._header.copy()
         action = 'SetEnable'
         headers['SOAPACTION'] = f"{self._urn_map['TAM']}#{action}"
-        soap_data = self._assemble_soap_data(action, self._urn_map['TAM'],
-                                             {'NewIndex': tam_index, 'NewEnable': int(new_enable)})
+        soap_data = self._assemble_soap_data(action, self._urn_map['TAM'], {'NewIndex': tam_index, 'NewEnable': int(new_enable)})
 
         self._get_lua_post_request(url, soap_data, headers)
 
@@ -3453,8 +3443,8 @@ class AVM(SmartPlugin):
                 item = item.return_parent()
 
         if wlan_index is not None:
-            wlan_index = int(wlan_index) - 1
-            if not 0 <= wlan_index <= 2:
+            wlan_index = int(wlan_index)
+            if not 1 <= wlan_index <= 3:
                 wlan_index = None
                 self.logger.warning(f"Attribute 'avm_wlan_index' for item {item.id()} not in valid range 1-3.")
 
@@ -3680,14 +3670,12 @@ class AVM(SmartPlugin):
         :param item: item to be updated (Supported item avm_data_types: wlanconfig, wlan_guest_time_remaining
         """
 
-        url = None
-        wlan_index = self.get_iattr_value(item.conf, 'avm_wlan_index')
+        wlan_index = self._get_wlan_index(item)
 
         if wlan_index:
             url = self._build_url(f"/upnp/control/wlanconfig{wlan_index}")
         else:
-            self.logger.error(f'No or incorrect avm_wlan_index attribute provided for {item}')
-        if not url:
+            self.logger.error(f'No or incorrect avm_wlan_index attribute provided for {item.id()}')
             return
 
         if self.get_iattr_value(item.conf, 'avm_data_type') in ['wlanconfig', 'wlanconfig_ssid']:
@@ -3702,7 +3690,7 @@ class AVM(SmartPlugin):
         headers['SOAPACTION'] = f"{self._urn_map['WLANConfiguration']}"[:43] + f"{wlan_index}#{action}"
         soap_data = self._assemble_soap_data(action, f"{self._urn_map['WLANConfiguration']}"[:43] + f"{wlan_index}")
 
-        if f"wlanconfig_{wlan_index}_{action}" not in self._response_cache and url:
+        if f"wlanconfig_{wlan_index}_{action}" not in self._response_cache:
             response = self._get_post_request(url, soap_data, headers)
             if response is not None:
                 self._response_cache[f"wlanconfig_{wlan_index}_{action}"] = response.content
