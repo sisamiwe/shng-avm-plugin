@@ -229,6 +229,7 @@ class MonitoringService:
         """
         Connects to the call monitor of the AVM device
         """
+
         if self._listen_active:
             self._plugin_instance.logger.debug("MonitoringService: Connect called while listen active")
             return
@@ -249,6 +250,7 @@ class MonitoringService:
         """
         Disconnects from the call monitor of the AVM device
         """
+
         self._plugin_instance.logger.debug("MonitoringService: disconnecting")
         self._listen_active = False
         self._stop_counter('incoming')
@@ -299,7 +301,7 @@ class MonitoringService:
 
     def get_item_count_total(self):
         """
-        Returns number of added items (all items of MonitoringService service
+        Returns number of added items (all items of MonitoringService service)
 
         :return: number of items hold by the MonitoringService
         """
@@ -836,7 +838,7 @@ class AVM(SmartPlugin):
 
     def _assemble_soap_data(self, action, service, argument=''):
         """
-        Builds the soap data set (from body and envelope templates for a given request.
+        Builds the soap data set (from body and envelope templates for a given request.)
 
         :param action: string of the action
         :type action: str
@@ -1394,13 +1396,12 @@ class AVM(SmartPlugin):
 
     def update_item(self, item, caller=None, source=None, dest=None):
         """
-        | Write items values - in case they were changed from somewhere else than the AVM plugin (=the FritzDevice) to
-        | the FritzDevice.
+        Write items values - in case they were changed from somewhere else than the AVM plugin (=the FritzDevice) to the FritzDevice.
 
-        | Uses:
-        | - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_tam.pdf
-        | - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/wlanconfigSCPD.pdf
-        | - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_homeauto.pdf
+        Uses:
+        - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_tam.pdf
+        - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/wlanconfigSCPD.pdf
+        - http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/x_homeauto.pdf
 
         :param item: item to be updated towards the FritzDevice (Supported item avm_data_types: wlanconfig, tam, aha_device)
         :param caller: caller
@@ -1416,8 +1417,7 @@ class AVM(SmartPlugin):
             if self.has_iattr(item.conf, 'avm_read_after_write'):
                 readafterwrite = int(self.get_iattr_value(item.conf, 'avm_read_after_write'))
                 if self.debug_log:
-                    self.logger.debug(
-                        f'Attempting read after write for item: {item.id()}, avm_data_type: {avm_data_type}, delay: {readafterwrite}s')
+                    self.logger.debug(f'Attempting read after write for item: {item.id()}, avm_data_type: {avm_data_type}, delay: {readafterwrite}s')
 
             # handle wlanconfig attributes
             if avm_data_type == 'wlanconfig':
@@ -1686,8 +1686,7 @@ class AVM(SmartPlugin):
                 #            # RGB hue will be supported by Fritzbox approximately from Q2 2022 on:
                 #            #self.set_color(ain_device, hue_value, saturation, duration=0)
                 #if saturation == -1:
-                #    self.logger.warning(
-                #        f"Cannot execute hue command because saturation value cannot be found in item tree")
+                #    self.logger.warning(f"Cannot execute hue command because saturation value cannot be found in item tree")
 
                 # read new value after writing
                 if readafterwrite:
@@ -1723,8 +1722,7 @@ class AVM(SmartPlugin):
             #                # write value
             #                #self.set_color(ain_device, hue, saturation_value, duration=0)
             #    if hue == -1:
-            #        self.logger.warning(
-            #            f"Cannot execute saturation command because hue value cannot be found in item tree")
+            #        self.logger.warning(f"Cannot execute saturation command because hue value cannot be found in item tree")
 
             #    # read new value after writing
             #    if readafterwrite:
@@ -1764,18 +1762,14 @@ class AVM(SmartPlugin):
         headers = self._header.copy()
         action = 'SetEnable'
         headers['SOAPACTION'] = f"{self._urn_map['WLANConfiguration']}"[:43] + f"{wlan_index}#{action}"
-        soap_data = self._assemble_soap_data(action, f"{self._urn_map['WLANConfiguration']}"[:43] + f"{wlan_index}",
-                                             {'NewEnable': int(new_enable)})
+        soap_data = self._assemble_soap_data(action, f"{self._urn_map['WLANConfiguration']}"[:43] + f"{wlan_index}", {'NewEnable': int(new_enable)})
 
         self._get_lua_post_request(url, soap_data, headers)
 
         # check if remaining time is set as item
         for citem in self._fritz_device.get_items():  # search for guest time remaining item.
-            if self.get_iattr_value(citem.conf, 'avm_data_type') == 'wlan_guest_time_remaining' and int(
-                    self.get_iattr_value(citem.conf, 'avm_wlan_index')) == wlan_index:
-                self._response_cache.pop(
-                    f"wlanconfig_{self.get_iattr_value(citem.conf, 'avm_wlan_index')}_X_AVM-DE_GetWLANExtInfo",
-                    None)  # reset response cache
+            if self.get_iattr_value(citem.conf, 'avm_data_type') == 'wlan_guest_time_remaining' and int(self.get_iattr_value(citem.conf, 'avm_wlan_index')) == wlan_index:
+                self._response_cache.pop(f"wlanconfig_{self.get_iattr_value(citem.conf, 'avm_wlan_index')}_X_AVM-DE_GetWLANExtInfo", None)  # reset response cache
                 self._update_wlan_config(citem)  # immediately update remaining guest time
 
     def set_tam(self, tam_index=0, new_enable=False):
@@ -2131,6 +2125,7 @@ class AVM(SmartPlugin):
         Get the DOM elements for the RGM default colors using minidom.
         
         """
+
         colors = None
         plain = self._aha_request("getcolordefaults", ain=ain)
         if plain:
@@ -2687,7 +2682,7 @@ class AVM(SmartPlugin):
 
     def _aha_request(self, cmd, ain=None, param=None, rf=str):
         """
-        Create an request for AHA-device get response
+        Create a request for AHA-device get response
         :param cmd:     command to be sent
         :type cmd:      str
         :param ain:     ain of device
@@ -2697,7 +2692,6 @@ class AVM(SmartPlugin):
         :param rf:      type of returned value
         :type rf:       any
         :return:        response
-        :type return:   any
         """
         
         if not self.aha_http_interface:
@@ -2985,12 +2979,12 @@ class AVM(SmartPlugin):
                             try:
                                 self._fritz_device.get_smarthome_devices()[ain]['identifier'] = str(
                                     child.getElementsByTagName('identifier')[0].firstChild.data)
-                            except AttributeError:
+                            except (AttributeError, IndexError):
                                 pass
                             try:
                                 self._fritz_device.get_smarthome_devices()[ain]['id'] = str(
                                     child.getElementsByTagName('id')[0].firstChild.data)
-                            except AttributeError:
+                            except (AttributeError, IndexError):
                                 pass
 
                 # information of AVM smarthome device having alarm
@@ -3286,40 +3280,40 @@ class AVM(SmartPlugin):
         """
 
         if hue <= 20:
-            #self.logger.debug(f'setcolor to red (hue={hue})')
+            # self.logger.debug(f'setcolor to red (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 358, 'saturation': 180, 'duration': int(duration)}, rf=bool)
         elif hue <= 45:
-            #self.logger.debug(f'setcolor to orange (hue={hue})')
+            # self.logger.debug(f'setcolor to orange (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 35, 'saturation': 214, 'duration': int(duration)}, rf=bool)
         elif hue <= 55:
-            #self.logger.debug(f'setcolor to yellow (hue={hue})')
+            # self.logger.debug(f'setcolor to yellow (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 52, 'saturation': 153, 'duration': int(duration)}, rf=bool)
         elif hue <= 100:
-            #self.logger.debug(f'setcolor to grasgreen (hue={hue})')
+            # self.logger.debug(f'setcolor to grasgreen (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 92, 'saturation': 123, 'duration': int(duration)}, rf=bool)
         elif hue <= 135:
-            #self.logger.debug(f'setcolor to green (hue={hue})')
+            # self.logger.debug(f'setcolor to green (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 120, 'saturation': 160, 'duration': int(duration)}, rf=bool)
         elif hue <= 175:
-            #self.logger.debug(f'setcolor to turquoise (hue={hue})')
+            # self.logger.debug(f'setcolor to turquoise (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 160, 'saturation': 145, 'duration': int(duration)}, rf=bool)
         elif hue <= 210:
-            #self.logger.debug(f'setcolor to cyan (hue={hue})')
+            # self.logger.debug(f'setcolor to cyan (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 195, 'saturation': 179, 'duration': int(duration)}, rf=bool)
         elif hue <= 240:
-            #self.logger.debug(f'setcolor to blue (hue={hue})')
+            # self.logger.debug(f'setcolor to blue (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 225, 'saturation': 204, 'duration': int(duration)}, rf=bool)
         elif hue <= 280:
-            #self.logger.debug(f'setcolor to violett (hue={hue})')
+            # self.logger.debug(f'setcolor to violett (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 266, 'saturation': 169, 'duration': int(duration)}, rf=bool)
         elif hue <= 310:
-            #self.logger.debug(f'setcolor to magenta (hue={hue})')
+            # self.logger.debug(f'setcolor to magenta (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 296, 'saturation': 140, 'duration': int(duration)}, rf=bool)
         elif hue <= 350:
-            #self.logger.debug(f'setcolor to pink (hue={hue})')
+            # self.logger.debug(f'setcolor to pink (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 335, 'saturation': 180, 'duration': int(duration)}, rf=bool)
         elif hue <= 360:
-            #self.logger.debug(f'setcolor to red (hue={hue})')
+            # self.logger.debug(f'setcolor to red (hue={hue})')
             return self._aha_request("setcolor", ain=ain, param={'hue': 358, 'saturation': 180, 'duration': int(duration)}, rf=bool)
         else:
             self.logger.error(f'setcolor hue out of range (hue={hue})')
@@ -3418,12 +3412,7 @@ class AVM(SmartPlugin):
         lookup_item = item
         for i in range(2):
             attribute = 'ain'
-            attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
             ain_device = self.get_iattr_value(lookup_item.conf, attribute)
-            if ain_device is not None:
-                break
-            ain_device = self.get_iattr_value(lookup_item.conf, attribute_w_instance)
             if ain_device is not None:
                 break
             else:
@@ -3437,11 +3426,6 @@ class AVM(SmartPlugin):
             lookup_item = item
             for i in range(2):
                 attribute = 'avm_ain'
-                attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
-                ain_device = self.get_iattr_value(lookup_item.conf, attribute_w_instance)
-                if ain_device is not None:
-                    break
                 ain_device = self.get_iattr_value(lookup_item.conf, attribute)
                 if ain_device is not None:
                     break
@@ -3449,8 +3433,10 @@ class AVM(SmartPlugin):
                     lookup_item = lookup_item.return_parent()
 
         if ain_device is None:
-            self.logger.error('Device AIN is not defined or instance not given')
-        return str(ain_device)
+            self.logger.error(f'Device AIN for {item.id()} is not defined or instance not given')
+            return None
+
+        return ain_device
 
     def _get_wlan_index(self, item):
         """
@@ -3460,12 +3446,7 @@ class AVM(SmartPlugin):
         wlan_index = None
         for i in range(2):
             attribute = 'avm_wlan_index'
-            attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
             wlan_index = self.get_iattr_value(item.conf, attribute)
-            if wlan_index:
-                break
-            wlan_index = self.get_iattr_value(item.conf, attribute_w_instance)
             if wlan_index:
                 break
             else:
@@ -3487,12 +3468,7 @@ class AVM(SmartPlugin):
         tam_index = None
         for i in range(2):
             attribute = 'avm_tam_index'
-            attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
             tam_index = self.get_iattr_value(item.conf, attribute)
-            if tam_index:
-                break
-            tam_index = self.get_iattr_value(item.conf, attribute_w_instance)
             if tam_index:
                 break
             else:
@@ -3514,12 +3490,7 @@ class AVM(SmartPlugin):
         deflection_index = None
         for i in range(2):
             attribute = 'avm_deflection_index'
-            attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
             deflection_index = self.get_iattr_value(item.conf, attribute)
-            if deflection_index:
-                break
-            deflection_index = self.get_iattr_value(item.conf, attribute_w_instance)
             if deflection_index:
                 break
             else:
@@ -3541,12 +3512,7 @@ class AVM(SmartPlugin):
         mac = None
         for i in range(2):
             attribute = 'avm_mac'
-            attribute_w_instance = f"{attribute}@{self.get_instance_name()}"
-
             mac = self.get_iattr_value(item.conf, attribute)
-            if mac:
-                break
-            mac = self.get_iattr_value(item.conf, attribute_w_instance)
             if mac:
                 break
             else:
@@ -3568,8 +3534,7 @@ class AVM(SmartPlugin):
         url = self._build_url("/upnp/control/deviceinfo")
         headers = self._header.copy()
 
-        if self.get_iattr_value(item.conf, 'avm_data_type') in ['uptime', 'software_version', 'hardware_version',
-                                                                'serial_number']:
+        if self.get_iattr_value(item.conf, 'avm_data_type') in ['uptime', 'software_version', 'hardware_version', 'serial_number']:
             action = 'GetInfo'
         else:
             self.logger.error(f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not supported by plugin")
@@ -3610,8 +3575,7 @@ class AVM(SmartPlugin):
         if len(element_xml) > 0:
             item(element_xml[0].firstChild.data, self.get_shortname())
         else:
-            self.logger.info(
-                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
+            self.logger.info(f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_tam(self, item):
         """
@@ -3659,15 +3623,13 @@ class AVM(SmartPlugin):
             if len(element_xml) > 0:
                 item(element_xml[0].firstChild.data, self.get_shortname())
             else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                self.logger.error(f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') == 'tam_name':
             element_xml = xml.getElementsByTagName('NewName')
             if len(element_xml) > 0:
                 item(element_xml[0].firstChild.data, self.get_shortname())
             else:
-                self.logger.error(
-                    f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
+                self.logger.error(f"Attribute {self.get_iattr_value(item.conf, 'avm_data_type')} not available on the FritzDevice")
         elif self.get_iattr_value(item.conf, 'avm_data_type') in ['tam_new_message_number', 'tam_total_message_number']:
             message_url_xml = xml.getElementsByTagName('NewURL')
             if len(message_url_xml) > 0:
@@ -3686,8 +3648,7 @@ class AVM(SmartPlugin):
                     self._response_cache["tam_messages"] = message_result.content
                 else:
                     if self.debug_log:
-                        self.logger.debug(
-                            f"Accessing tam_messages response cache for action {action} and item {item.property.path}!")
+                        self.logger.debug(f"Accessing tam_messages response cache for action {action} and item {item.property.path}!")
 
                 try:
                     message_xml = minidom.parseString(self._response_cache["tam_messages"])
@@ -3712,7 +3673,7 @@ class AVM(SmartPlugin):
 
     def _update_wlan_config(self, item):
         """
-        Updates wlan related information, all items of this method need an numeric avm_wlan_index (typically 1-3)
+        Updates wlan related information, all items of this method need a numeric avm_wlan_index (typically 1-3)
 
         Uses: http://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/wlanconfigSCPD.pdf
 
@@ -3747,8 +3708,7 @@ class AVM(SmartPlugin):
                 self._response_cache[f"wlanconfig_{wlan_index}_{action}"] = response.content
         else:
             if self.debug_log:
-                self.logger.debug(
-                    f"Accessing wlanconfig response cache for action {action} and item {item.property.path}!")
+                self.logger.debug(f"Accessing wlanconfig response cache for action {action} and item {item.property.path}!")
 
         try:
             xml = minidom.parseString(self._response_cache[f"wlanconfig_{wlan_index}_{action}"])
@@ -3775,8 +3735,7 @@ class AVM(SmartPlugin):
         if data is not None:
             item(data, self.get_shortname())
         else:
-            self.logger.info(
-                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
+            self.logger.info(f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_wan_dsl_interface_config(self, item):
         """
@@ -3806,8 +3765,7 @@ class AVM(SmartPlugin):
                 self._response_cache[f"wan_dsl_interface_config_{action}"] = response.content
         else:
             if self.debug_log:
-                self.logger.debug(
-                    f"Accessing wan_dsl_interface_config response cache for action {action} and item {item.property.path}!")
+                self.logger.debug(f"Accessing wan_dsl_interface_config response cache for action {action} and item {item.property.path}!")
 
         try:
             xml = minidom.parseString(self._response_cache[f"wan_dsl_interface_config_{action}"])
@@ -3826,8 +3784,7 @@ class AVM(SmartPlugin):
         if element_xml is not None and len(element_xml) > 0:
             item(int(element_xml[0].firstChild.data), self.get_shortname())
         else:
-            self.logger.info(
-                f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
+            self.logger.info(f"Request of attribute {self.get_iattr_value(item.conf, 'avm_data_type')} returned None. Seems that data are not available/supported.")
 
     def _update_wan_common_interface_configuration(self, item):
         """
