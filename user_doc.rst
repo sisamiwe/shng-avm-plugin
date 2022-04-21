@@ -7,6 +7,7 @@ Changelog
 
 1.6.7
 ~~~~~
+- Implement plugin configuration "avm_home_automation" to use AHA (AVM HomeAutomation) Interface (Default: False)
 - correct typo "temperatur" to "temperature" in struct
 - add method "get_device_log_from_lua_separated" to get log already as list of list
 - limit Log entries shown on WebIF to recent 200

@@ -1,12 +1,12 @@
 # Metadata for the Smart-Plugin
 plugin:
     # Global plugin attributes
-    type: interface                 # plugin type (gateway, interface, protocol, system, web)
+    type: interface
     description:
         de: 'Ansteuerung von AVM FRITZ!Boxen, WLAN-Repeatern, DECT Steckdosen, etc.'
         en: 'Get and send data from/to AVM devices such as the FRITZ!Box, Wifi Repeaters or DECT sockets.'
     maintainer: psilo909, sisamiwe
-    tester: Sandman60, cmalo
+    tester: bmx, onkelandy, aschwith, schuma
 #    keywords: iot xyz
     state: 'qa-passed'
     documentation: http://smarthomeng.de/user/plugins/avm/user_doc.html
@@ -82,8 +82,8 @@ parameters:
         type: bool
         default: False
         description:
-            de: '(optional) Aktiviert oder deaktiviert den Zugriff auf AVM Smarthome Geräte mit dem AHA HTTP Interface.'
-            en: '(optional) Activates or deactivates access to AVM smarthome devices via AHA HTTP interface'
+            de: '(optional) Aktiviert oder deaktiviert den Zugriff auf AVM HomeAutomation Geräte mit dem AHA HTTP Interface.'
+            en: '(optional) Activates or deactivates access to AVM HomeAutomation devices via AHA HTTP interface'
     log_entry_count:
         type: int
         default: 200
@@ -240,7 +240,7 @@ item_attributes:
         - 'hue'                         # w/r       Hue (Status und Setzen)                         num             neu 1.6.4
         - 'set_saturation'              # w/o       Saturation Setzen                               num
         - 'saturation'                  # w/r       Saturation (Status und Setzen)                  num             neu 1.6.4
-        - 'set_colortemperature'        # w/o       Farbtemperatur Setzten                          num
+        - 'set_colortemperature'        # w/o       Farbtemperatur setzten                          num
         - 'colortemperature'            # w/r       Farbtemperatur (Status und Setzen)              num             neu 1.6.4
 
         - 'switch_state'                # r/w       Schaltzustand Steckdose (Status und Setzen)     bool
