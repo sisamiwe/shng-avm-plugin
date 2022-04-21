@@ -7,10 +7,15 @@ Changelog
 
 1.6.7
 ~~~~~
+- Implement plugin configuration "avm_home_automation" to use AHA (AVM HomeAutomation) Interface (Default: False)
 - correct typo "temperatur" to "temperature" in struct
 - add method "get_device_log_from_lua_separated" to get log already as list of list
 - limit Log entries shown on WebIF to recent 200
 - Update WebIF with possibility to adapt table size to screen
+- Debugging for 'button' e.g. DECT440
+- Minor code correction / debugging
+- Adapt user_doc.rst
+- Feature provided by plugin avm_smarthome are completely integrated. Therefore tat plugin is marked as deprecated.
 
 1.6.6
 ~~~~~
@@ -26,6 +31,8 @@ Changelog
 - Methoden "_get_sid", "_get_login_infos_from_http_request", "_http_logout_request", "_check_sid", "_calculate_pbkdf2_response", "_calculate_md5_response" hinzu
 - Bugfixing, Verbesserung der Logausgaben
 - Codevereinfachung und Korrektur
+- Plugin Parameter für WebIF Page Length hinzu
+- Plugin Parameter für Aktivierung der Nutzung des AHA-HTTP Interfaces hinzu
 
 1.6.4
 ~~~~~
@@ -108,6 +115,10 @@ Dafür stehen die folgenden Einstellungen zur Verfügung:
 - `ssl`: True or False => True will add "https", False "http" to the URLs in the plugin
 - `verify`: True or False => Turns certificate verification on or off. Typically False
 - `call_monitor`: True or False => Activates or deactivates the MonitoringService, which connects to the FritzDevice's call monitor
+- 'call_monitor_incoming_filter': Filter only specific numbers to be watched by call monitor
+- 'avm_home_automation': True or False => Activates or deactivates the AHA Interface to communicate with HomeAutomation Devices,
+- 'log_entry_count': Number of Log-Messages, which will be displayed.
+- 'webif_pagelength': Number of items being listed in a web interface table per page by default.
 - `instance`: Unique identifier for each FritzDevice / each instance of the plugin
 
 Alternativ kann das Plugin auch manuell konfiguriert werden.
@@ -127,6 +138,7 @@ Alternativ kann das Plugin auch manuell konfiguriert werden.
         verify: False    # verify ssl certificate
         call_monitor: 'True'
         call_monitor_incoming_filter: "...    ## optional, don't set if you don't want to watch only one specific number with your call monitor"
+        avm_home_automation: 'True'
         instance: fritzbox_7490
 
     fb2:
@@ -140,6 +152,7 @@ Alternativ kann das Plugin auch manuell konfiguriert werden.
         ssl: True    # use https or not
         verify: False    # verify ssl certificate
         call_monitor: 'True'
+        avm_home_automation: 'False'
         instance: wlan_repeater_1750
 
 .. note:: Kürzere Updatezyklen können abhängig vm Fritzdevice aufgrund von CPU Auslastung und damit zu Problemen (u.a.
@@ -174,7 +187,7 @@ avm_mac
 ~~~~~~~
 Definition der MAC Adresse für Items vom avm_data_type `network_device`. Nur für diese Items mandatory!'
 
-ain
+avm_ain
 ~~~
 Definition der Aktor Identifikationsnummer (AIN)Items für smarthome Items. Nur für diese Items mandatory!'
 
@@ -193,18 +206,18 @@ item_structs
 Zur Vereinfachung der Einrichtung von Items sind für folgende Item-structs vordefiniert:
 
 - ``info``  -  General Information about Fritzbox
-- ``monitor``  -  Coll Monitor
+- ``monitor``  -  Call Monitor
 - ``tam``  -  (für einen) Anrufbeantworter
 - ``deflection``  -  (für eine) Rufumleitung
 - ``wan``  -  WAN Items
 - ``wlan``  -  Wireless Lan Items
-- ``device``  -  Item eines verbundenen Gerätes
-- ``smarthome_general``  -  Allgemeine Informationen eines DECT smarthome Devices
-- ``smarthome_hkr``  -  spezifische Informationen eines DECT Thermostat Devices
-- ``smarthome_temperatur_sensor``  -  spezifische Informationen eines DECT smarthome Devices mit Temperatursensor
-- ``smarthome_alert``  -  spezifische Informationen eines DECT smarthome Devices mit Alarmfunktion
-- ``smarthome_switch``  -  spezifische Informationen eines DECT smarthome Devices mit Schalter
-- ``smarthome_powermeter``  -  spezifische Informationen eines DECT smarthome Devices mit Strommessung
+- ``device``  -  Items eines verbundenen Gerätes
+- ``smarthome_general``  -  Allgemeine Informationen eines AVM HomeAutomation Devices
+- ``smarthome_hkr``  -  spezifische Informationen eines AVM HomeAutomation Thermostat Devices
+- ``smarthome_temperatur_sensor``  -  spezifische Informationen eines AVM HomeAutomation Devices mit Temperatursensor
+- ``smarthome_alert``  -  spezifische Informationen eines AVM HomeAutomation Devices mit Alarmfunktion
+- ``smarthome_switch``  -  spezifische Informationen eines AVM HomeAutomation Devices mit Schalter
+- ``smarthome_powermeter``  -  spezifische Informationen eines AVM HomeAutomation Devices mit Strommessung
 
 
 Item Beispiel mit Verwendung der structs ohne Instanz
@@ -253,7 +266,7 @@ Item Beispiel mit Verwendung der structs ohne Instanz
         smarthome:
             hkr_og_bad:
                 type: foo
-                ain: 'xxxxx xxxxxxx'
+                avm_ain: 'xxxxx xxxxxxx'
                 struct:
                   - avm.smarthome_general
                   - avm.smarthome_hkr
@@ -472,10 +485,53 @@ Aufruf des Webinterfaces
 Das Plugin kann aus dem Admin-IF aufgerufen werden. Dazu auf der Seite Plugins in der entsprechenden
 Zeile das Icon in der Spalte **Web Interface** anklicken.
 
+Es werden nur die Tabs angezeigt, deren Funktionen im Plugin aktiviert sind bzw. die von Fritzdevice unterstützt werden.
+
 Im WebIF stehen folgende Reiter zur Verfügung:
- - AVM Items  -  Tabellarische Auflistung aller Items, die mit dem TR-064 Protokoll ausgelesen werden
- - AVM Smarthome Items  -  Tabellarische Auflistung aller Items, die mit dem AHA Protokoll ausgelesen werden (Items der Smarthome Geräte)
- - Plugin-API  -  Beschreibung der Plugin-API
- - Log-Einträge  -  Listung der Logeinträge der Fritzbox
- - Call Monitor Items  -  Tabellarische Auflistung des Anrufmonitors (nur wenn dieser konfiguriert ist)
- - AVM Smarthome Devices  -  Auflistung der mit der Fritzbox verbundenen Geräte
+
+AVM Items
+~~~~~~~~~
+
+Tabellarische Auflistung aller Items, die mit dem TR-064 Protokoll ausgelesen werden
+
+.. image:: user_doc/assets/webif_tab1.jpg
+   :class: screenshot
+
+AVM Smarthome Items
+~~~~~~~~~~~~~~~~~~~
+Tabellarische Auflistung aller Items, die mit dem AHA Protokoll ausgelesen werden (Items der AVM HomeAutomation Geräte)
+
+.. image:: user_doc/assets/webif_tab2.jpg
+   :class: screenshot
+
+AVM Smarthome Devices
+~~~~~~~~~~~~~~~~~~~~~
+
+Auflistung der mit der Fritzbox verbundenen AVM HomeAutomation Geräte
+
+.. image:: user_doc/assets/webif_tab3.jpg
+   :class: screenshot
+
+Call Monitor Items
+~~~~~~~~~~~~~~~~~~
+
+Tabellarische Auflistung des Anrufmonitors (nur wenn dieser konfiguriert ist)
+
+.. image:: user_doc/assets/webif_tab4.jpg
+   :class: screenshot
+
+Log-Einträge
+~~~~~~~~~~~~
+
+Listung der Logeinträge der Fritzbox
+
+.. image:: user_doc/assets/webif_tab5.jpg
+   :class: screenshot
+
+Plugin-API
+~~~~~~~~~~
+
+Beschreibung der Plugin-API
+
+.. image:: user_doc/assets/webif_tab6.jpg
+   :class: screenshot
